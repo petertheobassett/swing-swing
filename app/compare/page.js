@@ -15,6 +15,18 @@ export default function ComparePage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef(null);
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !video.requestVideoFrameCallback) return;
+
+    const update = () => {
+      setCurrentTime(video.currentTime);
+      video.requestVideoFrameCallback(update);
+    };
+
+    video.requestVideoFrameCallback(update);
+  }, []);
+
   const handleTimeUpdate = () => {
     if (videoRef.current) {
       setCurrentTime(videoRef.current.currentTime);
@@ -64,6 +76,8 @@ export default function ComparePage() {
         <div className="relative w-full aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-md mb-4 max-h-[82.5vh]">
           <video
             ref={videoRef}
+            muted
+            controls={false}
             src={videoUrl}
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
@@ -78,16 +92,14 @@ export default function ComparePage() {
               {isPlaying ? '❚❚' : '▶️'}
             </button>
             <input
-              type="range"
-              onInput={() => {
-                if (videoRef.current) {
-                  videoRef.current.pause();
-                  videoRef.current.play().catch(() => {});
-                }
-              }}
-              onChange={handleSeek}
-              onContextMenu={(e) => e.preventDefault()} // ✅ prevent right-click menu on timeline
-              className="w-full accent-white"
+                type="range"
+                min="0"
+                max={duration}
+                step="0.01"
+                value={currentTime}
+                onChange={handleSeek}
+                onContextMenu={(e) => e.preventDefault()}
+                className="w-full accent-white"
             />
           </div>
         </div>
