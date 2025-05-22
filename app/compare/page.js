@@ -73,7 +73,7 @@ export default function ComparePage() {
         <h1 className="absolute top-4 left-1/2 -translate-x-1/2 z-20 text-base font-semibold bg-black/60 text-white px-3 py-1 rounded-md">Swing-Swing</h1>
 
         {/* ✅ Custom video player with overlay controls */}
-        <div className="relative w-full aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-md mb-4 max-h-[82.5vh]">
+        <div className="relative w-full aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-md mb-4 max-h-[78vh]">
           <video
             ref={videoRef}
             muted
