@@ -57,11 +57,11 @@ export default function ComparePage() {
 
   return (
     <main className="flex flex-col min-h-screen w-full bg-white text-neutral-900 font-sans">
-      <div className="w-full max-w-[430px] mx-auto px-4 py-6 flex flex-col items-center">
-        <h1 className="text-2xl font-semibold text-center mb-6 tracking-tight">Swing-Swing</h1>
+      <div className="w-full max-w-[430px] mx-auto px-4 pt-4 flex flex-col items-center">
+        <h1 className="absolute top-4 left-1/2 -translate-x-1/2 z-20 text-base font-semibold bg-black/60 text-white px-3 py-1 rounded-md">Swing-Swing</h1>
 
         {/* ✅ Custom video player with overlay controls */}
-        <div className="relative w-full aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-md mb-6">
+        <div className="relative w-full aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-md mb-4 max-h-[82.5vh]">
           <video
             ref={videoRef}
             src={videoUrl}
@@ -79,10 +79,12 @@ export default function ComparePage() {
             </button>
             <input
               type="range"
-              min="0"
-              max={duration}
-              step="0.01"
-              value={currentTime}
+              onInput={() => {
+                if (videoRef.current) {
+                  videoRef.current.pause();
+                  videoRef.current.play().catch(() => {});
+                }
+              }}
               onChange={handleSeek}
               onContextMenu={(e) => e.preventDefault()} // ✅ prevent right-click menu on timeline
               className="w-full accent-white"
@@ -91,7 +93,7 @@ export default function ComparePage() {
         </div>
 
         {/* ✅ Phase buttons */}
-        <div className="w-full grid grid-cols-5 gap-1 mb-4">
+        <div className="w-full grid grid-cols-5 gap-1 mb-2">
           {swingPhases.map((phase) => (
             <button
               key={phase}
@@ -108,7 +110,7 @@ export default function ComparePage() {
 
         {/* ✅ Continue button */}
         {allPhasesMarked && (
-          <button className="w-full px-4 py-3 bg-black text-white rounded-lg font-medium text-sm tracking-tight hover:bg-neutral-800 transition">
+          <button className="w-full px-4 py-2 bg-black text-white rounded-lg font-medium text-sm tracking-tight hover:bg-neutral-800 transition">
             Continue to Overlay →
           </button>
         )}
