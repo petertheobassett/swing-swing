@@ -9,27 +9,51 @@ export default function MotionTracker({ videoRef, drawOnce = false, timestamp, o
   const canvasRef = useRef(null);
   const detectorRef = useRef(null);
   const rafIdRef = useRef(null);
+  const prevKeypointsRef = useRef(null);
+  const SMOOTHING = 0.5;
 
+  // ✅ Step 1: Create and dispose detector ONCE
   useEffect(() => {
     let isMounted = true;
 
-    const start = async () => {
-      if (!videoRef.current?.video) return;
-      const video = videoRef.current.video;
-
+    const loadDetector = async () => {
       await tf.ready();
       await tf.setBackend('webgl');
 
-      // ✅ Load MoveNet
       detectorRef.current = await posedetection.createDetector(
         posedetection.SupportedModels.MoveNet,
         {
           modelType: posedetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+          modelUrl: '/movenet/model.json',
         }
       );
 
+      console.log('✅ Detector loaded');
+    };
+
+    loadDetector();
+
+    return () => {
+      isMounted = false;
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      if (detectorRef.current) {
+        detectorRef.current.dispose();
+        console.log('♻️ Detector disposed');
+      }
+    };
+  }, []);
+
+  // ✅ Step 2: Separate effect to run detection logic
+  useEffect(() => {
+    let isMounted = true;
+
+    const startTracking = async () => {
+      const detector = detectorRef.current;
+      const video = videoRef.current?.video;
+
+      if (!detector || !video) return;
+
       if (drawOnce && timestamp !== undefined) {
-        // 🔹 Single-frame detection (e.g. Follow)
         video.currentTime = timestamp;
 
         await new Promise((resolve) =>
@@ -39,19 +63,39 @@ export default function MotionTracker({ videoRef, drawOnce = false, timestamp, o
           }, { once: true })
         );
 
-        const poses = await detectorRef.current.estimatePoses(video);
+        const poses = await detector.estimatePoses(video);
         if (poses.length && isMounted) {
-          drawSkeleton(canvasRef.current, poses[0]);
+          drawSkeleton(canvasRef.current, poses[0], video);
           if (onComplete) onComplete();
         }
       } else {
-        // 🔁 Live tracking mode (Setup → Follow)
         const update = async () => {
           if (!isMounted || video.paused || video.ended) return;
 
-          const poses = await detectorRef.current.estimatePoses(video);
+          const poses = await detector.estimatePoses(video);
           if (poses.length && canvasRef.current) {
-            drawSkeleton(canvasRef.current, poses[0]);
+            const prev = prevKeypointsRef.current;
+            const curr = poses[0].keypoints;
+            let smoothed = curr;
+
+            if (prev && prev.length === curr.length) {
+              smoothed = curr.map((kp, i) => {
+                if (!prev[i]) return kp;
+                if (kp.score > 0.3 && prev[i].score > 0.3) {
+                  return {
+                    ...kp,
+                    x: prev[i].x * SMOOTHING + kp.x * (1 - SMOOTHING),
+                    y: prev[i].y * SMOOTHING + kp.y * (1 - SMOOTHING),
+                    score: Math.max(kp.score, prev[i].score),
+                  };
+                } else {
+                  return kp;
+                }
+              });
+            }
+
+            prevKeypointsRef.current = smoothed;
+            drawSkeleton(canvasRef.current, { ...poses[0], keypoints: smoothed }, video);
           }
 
           rafIdRef.current = video.requestVideoFrameCallback(update);
@@ -61,36 +105,40 @@ export default function MotionTracker({ videoRef, drawOnce = false, timestamp, o
       }
     };
 
-    start();
+    startTracking();
 
     return () => {
       isMounted = false;
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
     };
-  }, [videoRef, drawOnce, timestamp]);
+  }, [videoRef, drawOnce, timestamp, onComplete]);
 
   return (
     <canvas
       ref={canvasRef}
-        className="absolute inset-0 w-full h-full z-30 pointer-events-none"
+      className="absolute inset-0 w-full h-full z-30 pointer-events-none"
+      style={{ filter: 'none' }}
     />
   );
 }
 
 // 🧠 Draw MoveNet skeleton on canvas
-function drawSkeleton(canvas, pose) {
+function drawSkeleton(canvas, pose, video) {
   if (!canvas || !pose) return;
 
   const ctx = canvas.getContext('2d');
   const keypoints = pose.keypoints;
 
-  canvas.width = canvas.offsetWidth;
-  canvas.height = canvas.offsetHeight;
+  if (video && video.videoWidth && video.videoHeight) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+  } else {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
 
-  // 📐 Updated scaling with fallbacks
-  const video = canvas._videoRef?.current?.video;
-  const inputWidth = pose.inputWidth || video?.videoWidth || canvas.width;
-  const inputHeight = pose.inputHeight || video?.videoHeight || canvas.height;
+  const inputWidth = video?.videoWidth || canvas.width;
+  const inputHeight = video?.videoHeight || canvas.height;
 
   const scaleX = canvas.width / inputWidth;
   const scaleY = canvas.height / inputHeight;
