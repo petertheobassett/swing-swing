@@ -5,8 +5,7 @@ import SwingPlayer from '@/components/SwingPlayer';
 import MotionTracker from '@/components/MotionTracker'; // ✅ Ensure this is imported
 
 // 🎥 Default fallback video used before uploads are implemented
-const FALLBACK_VIDEO_URL =
-  'https://firebasestorage.googleapis.com/v0/b/swing-swing-e1982.firebasestorage.app/o/swing-uploads%2F1747711434555_test-clip.mp4?alt=media&token=58e3b123-157a-4e4c-9a77-0c166d7d220a';
+const FALLBACK_VIDEO_URL = '/videos/test-clip.mp4';
 
 // 🏌️ List of swing phases to be marked by the user
 const swingPhases = ['Setup', 'Back', 'Apex', 'Impact', 'Follow'];
