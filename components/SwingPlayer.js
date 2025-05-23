@@ -180,6 +180,7 @@ const SwingPlayer = forwardRef(function SwingPlayer(
           muted
           playsInline
           controls={false}
+          crossOrigin="anonymous"
           className="w-full h-full object-contain outline-none"
           tabIndex={0} // 🆕 Make video focusable for keyboard
           aria-label="Video player"
