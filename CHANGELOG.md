@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.0.5] - 2025-05-29
+
+### Added
+#### Complete Golf Swing Analysis Application
+- **Professional Golfer Comparison**: Compare user swing with Ben Hogan's professional swing side-by-side
+- **Motion Tracking & Skeleton Overlay**: Real-time pose detection with MoveNet AI model displaying skeleton overlay on both videos
+- **Visual Differentiation**: User skeleton (cyan/orange) vs Professional skeleton (pink/magenta) for clear distinction
+- **Smart Video Synchronization**: Duration-based playback rate matching - both videos start at "Back" phase with Hogan's video automatically sped up/slowed down to match user's swing duration
+- **Advanced Playback Controls**: Speed adjustment buttons (0.25x, 0.5x, 1x, 2x) with synchronized playback between videos
+- **Context-Aware UI**: Play button transforms to "Replay" when all swing phases are marked
+- **Seamless Navigation**: Upload/capture video → mark swing phases → navigate to professional comparison
+- **Transform-Aware Coordinate Mapping**: Fixed skeleton positioning for scaled/transformed video containers
+- **Canvas Optimization**: Proper canvas sizing and device pixel ratio handling for crisp skeleton rendering
+- **Memory Management**: Efficient TensorFlow.js loading, detector lifecycle management, and resource cleanup
+
+#### Technical Improvements
+- **Enhanced MotionTracker**: Transform-aware coordinate mapping for CSS-scaled containers
+- **Fixed Canvas Positioning**: Resolved skeleton leg visibility issues through proper canvas sizing compensation
+- **Coordinate System Fixes**: Accurate skeleton overlay positioning regardless of video transformations
+- **UI Polish**: Removed debugging artifacts and synchronized status indicators for production-ready appearance
+- **Performance Optimization**: Lazy loading of TensorFlow.js models and efficient pose detection
+- **Cross-Platform Compatibility**: Device pixel ratio handling for crisp rendering on all displays
+
+#### User Experience
+- **Professional Analysis Workflow**: Complete end-to-end golf swing analysis with AI-powered insights
+- **Visual Motion Tracking**: Real-time skeleton overlay with smooth keypoint interpolation
+- **Synchronized Comparison**: Professional golfer reference with intelligent timing synchronization
+- **Clean Modern UI**: Polished interface with consistent visual design and intuitive controls
+- **Mobile-Optimized**: Responsive design supporting various screen sizes and orientations
+
 ## [0.0.4] - 2025-05-23
 
 ### Added

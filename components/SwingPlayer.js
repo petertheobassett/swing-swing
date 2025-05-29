@@ -12,79 +12,174 @@ import {
 const SwingPlayer = forwardRef(function SwingPlayer(
   {
     videoUrl,
-    loaderTimeout = 10000, // Increased to 10s
     isPlaying,
     setIsPlaying,
     currentTime,
     setCurrentTime,
     setDuration,
-    onLoaderHidden, // <-- add this prop
+    onLoaderHidden,
+    onError,
+    onLoadStart,
+    isReplaying = false,
   },
   ref
 ) {
   const videoRef = useRef(null);
-  const timeoutRef = useRef(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasTimeoutError, setHasTimeoutError] = useState(false);
-  const hasSetDuration = useRef(false);
-  const [loadProgress, setLoadProgress] = useState(0);
-
-  // State to control instructional text visibility
+  const [videoReady, setVideoReady] = useState(false);
   const [showInstructions, setShowInstructions] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(0);
+  const hasSetDuration = useRef(false);
+  const initialLoadCompleteRef = useRef(false);
+  const [hasEverBeenReady, setHasEverBeenReady] = useState(false); // Use state instead of ref
 
-  // Minimum loader duration
-  const MIN_LOADER_TIME = 2000; // ms
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
-
-  // ✅ Expose controls to parent
+  // Expose simple video controls to parent
   useImperativeHandle(
     ref,
     () => ({
       seekTo: (time) => {
         const video = videoRef.current;
         if (video) {
-          console.log('📍 seekTo called with:', time);
           video.currentTime = time;
         }
       },
-      pause: () => videoRef.current?.pause(),
-      getCurrentTime: () => videoRef.current?.currentTime,
-      getVideo: () => videoRef.current, // 🆕 Expose video element for smooth playhead
-      video: videoRef.current, // 🆕 Expose video element directly
+      play: async () => {
+        const video = videoRef.current;
+        if (!video) return false;
+        
+        try {
+          await video.play();
+          return !video.paused;
+        } catch (error) {
+          console.warn('Play failed:', error);
+          return false;
+        }
+      },
+      pause: async () => {
+        const video = videoRef.current;
+        if (!video) return false;
+        
+        try {
+          video.pause();
+          return video.paused;
+        } catch (error) {
+          console.warn('Pause failed:', error);
+          return false;
+        }
+      },
+      get video() {
+        return videoRef.current;
+      },
     }),
     []
   );
 
-  // 🔍 Log URL for debugging
+  // Handle video ready state and reset loading state on video changes
   useEffect(() => {
-    console.log('🔎 SwingPlayer videoUrl:', videoUrl);
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Reset states when video URL changes
+    setVideoReady(false);
+    setHasError(false);
+    setLoadProgress(0);
+    initialLoadCompleteRef.current = false;
+    setHasEverBeenReady(false); // Reset the "ever been ready" flag on URL change
+
+    const handleReady = () => {
+      console.log('Video ready event fired, readyState:', video.readyState); // Debug log
+      setVideoReady(true);
+      setHasError(false);
+      setLoadProgress(100); // Complete progress when ready
+      initialLoadCompleteRef.current = true;
+      setHasEverBeenReady(true); // Mark that video has been ready at least once
+    };
+
+    const handleError = () => {
+      console.log('Video error event fired'); // Debug log
+      setHasError(true);
+      setVideoReady(false);
+    };
+
+    // Check if video is already ready (for cached videos)
+    const checkIfReady = () => {
+      if (video.readyState >= 3) { // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA
+        console.log('Video already ready on mount, readyState:', video.readyState);
+        handleReady();
+        return true;
+      }
+      return false;
+    };
+
+    // Check immediately in case video is already loaded
+    if (!checkIfReady()) {
+      // Only add listeners if not already ready
+      video.addEventListener('canplay', handleReady);
+      video.addEventListener('loadeddata', handleReady);
+      video.addEventListener('loadedmetadata', handleReady);
+      video.addEventListener('error', handleError);
+    }
+
+    return () => {
+      video.removeEventListener('canplay', handleReady);
+      video.removeEventListener('loadeddata', handleReady);
+      video.removeEventListener('loadedmetadata', handleReady);
+      video.removeEventListener('error', handleError);
+    };
   }, [videoUrl]);
 
-  // ⏳ Timeout loader fallback
+  // Progress animation during loading with proper reset
   useEffect(() => {
-    timeoutRef.current = setTimeout(() => {
-      if (isLoading) {
-        // Don't show error, just switch to 'Still loading...' message
-        setHasTimeoutError(false);
-      }
-    }, loaderTimeout);
-    return () => clearTimeout(timeoutRef.current);
-  }, [loaderTimeout, isLoading]);
-
-  // 🧠 Fallback: readyState polling
-  useEffect(() => {
-    if (!isLoading) return;
+    if (videoReady || hasEverBeenReady) return; // Don't show progress if already been ready
+    
+    setLoadProgress(0);
+    let progress = 0;
     const interval = setInterval(() => {
-      const video = videoRef.current;
-      if (video?.readyState >= 2) {
-        setIsLoading(false);
-        setHasTimeoutError(false);
-      }
-    }, 200);
-    return () => clearInterval(interval);
-  }, [isLoading]);
+      progress += 2;
+      setLoadProgress(Math.min(progress, 95));
+      if (progress >= 95) clearInterval(interval);
+    }, 100);
 
-  // 🎯 Ensure duration is captured early (e.g. on refresh/cached cases)
+    // Fallback: Force video ready after 5 seconds if still loading
+    const fallbackTimer = setTimeout(() => {
+      const video = videoRef.current;
+      if (!videoReady && video) {
+        console.log('Fallback: forcing video ready after 5s timeout, readyState:', video.readyState);
+        setVideoReady(true);
+        setLoadProgress(100);
+        setHasEverBeenReady(true);
+      }
+    }, 5000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(fallbackTimer);
+    };
+  }, [videoReady, videoUrl, hasEverBeenReady]); // Include hasEverBeenReady in deps
+
+  // Auto-dismiss instructions (reset on video change)
+  useEffect(() => {
+    setShowInstructions(true); // Reset instructions when video changes
+    const timer = setTimeout(() => setShowInstructions(false), 3000); // Reduced to 3 seconds
+    return () => clearTimeout(timer);
+  }, [videoUrl]);
+
+  // Call onLoaderHidden when ready - don't wait for instructions to dismiss
+  useEffect(() => {
+    if (videoReady && !hasError) {
+      console.log('Video ready, calling onLoaderHidden after delay');
+      // Complete the progress bar animation
+      setLoadProgress(100);
+      
+      const timer = setTimeout(() => {
+        console.log('Calling onLoaderHidden callback');
+        onLoaderHidden?.();
+      }, 500); // Slightly longer delay to show completed progress
+      return () => clearTimeout(timer);
+    }
+  }, [videoReady, hasError]); // Removed onLoaderHidden from deps
+
+  // Capture duration
   useLayoutEffect(() => {
     const video = videoRef.current;
     if (
@@ -94,307 +189,124 @@ const SwingPlayer = forwardRef(function SwingPlayer(
       !isNaN(video.duration) &&
       !hasSetDuration.current
     ) {
-      console.log('⚡ eager duration:', video.duration);
       hasSetDuration.current = true;
       setDuration?.(video.duration);
     }
   }, [setDuration]);
 
-  // 🧭 onLoadedMetadata event
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !setDuration) return;
-    const handleLoadedMetadata = () => {
-      if (!hasSetDuration.current) {
-        console.log('🎯 loadedmetadata: duration =', video.duration);
-        hasSetDuration.current = true;
-        setDuration(video.duration || 0);
-      }
-    };
-    video.addEventListener('loadedmetadata', handleLoadedMetadata);
-    return () => video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-  }, [setDuration]);
-
-  // 🕰 Sync currentTime
+  // Sync currentTime
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !setCurrentTime) return;
-    const handleTimeUpdate = () => setCurrentTime(video.currentTime);
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(video.currentTime);
+    };
+
     video.addEventListener('timeupdate', handleTimeUpdate);
     return () => video.removeEventListener('timeupdate', handleTimeUpdate);
   }, [setCurrentTime]);
 
-  // ▶️ External play/pause control
+  // Sync play/pause state
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
-    // Only play/pause in response to explicit isPlaying prop change from parent
-    // Do NOT auto-play on mount or after load
-    if (isPlaying === true && video.paused) {
-      // Only play if user has interacted (browser will block otherwise)
-      // Optionally, you can check a flag for user interaction if needed
-      video
-        .play()
-        .then(() => setIsPlaying?.(true))
-        .catch((err) => {
-          // Silently ignore play errors due to lack of user gesture
-          setIsPlaying?.(false);
-        });
-    } else if (isPlaying === false && !video.paused) {
-      video.pause();
-      setIsPlaying?.(false);
-    }
-  }, [isPlaying, setIsPlaying]);
-
-  // Progress bar for loader
-  useEffect(() => {
-    if (!isLoading) return;
-    setLoadProgress(0); // Always start at 0 when loading starts
-    let start = Date.now();
-    let frame;
-    let fallbackToReal = false;
-    const duration = 7000; // 7 seconds for instruction text
-    const update = () => {
-      const elapsed = Date.now() - start;
-      if (!fallbackToReal && elapsed < duration) {
-        setLoadProgress(Math.min(1, elapsed / duration));
-        if (elapsed < duration && isLoading) {
-          frame = requestAnimationFrame(update);
-        } else if (isLoading) {
-          // After 7s, fallback to real loading progress
-          fallbackToReal = true;
-          frame = requestAnimationFrame(update);
-        }
-      } else if (isLoading) {
-        // Fallback: estimate based on video readyState
-        const video = videoRef.current;
-        let progress = 0.95; // Default to nearly full
-        if (video && video.buffered && video.buffered.length > 0 && video.duration) {
-          const end = video.buffered.end(video.buffered.length - 1);
-          progress = Math.min(1, end / video.duration);
-        }
-        setLoadProgress(progress);
-        frame = requestAnimationFrame(update);
-      }
-    };
-    update();
-    return () => cancelAnimationFrame(frame);
-  }, [isLoading, loaderTimeout]);
-
-  // Always show the bar full for at least 300ms before hiding loader
-  useEffect(() => {
-    if (!isLoading && loadProgress === 1) {
-      const timeout = setTimeout(() => {}, 300);
-      return () => clearTimeout(timeout);
-    }
-  }, [isLoading, loadProgress]);
-
-  // Start timer for minimum loader duration
-  useEffect(() => {
-    if (!isLoading) return;
-    setMinTimeElapsed(false);
-    const timer = setTimeout(() => setMinTimeElapsed(true), MIN_LOADER_TIME);
-    return () => clearTimeout(timer);
-  }, [isLoading]);
-
-  // Hide loader only when both min time and loading are done
-  useEffect(() => {
-    if (minTimeElapsed && !isLoading) {
-      setIsLoading(false);
-      setShowInstructions(false);
-    }
-  }, [minTimeElapsed, isLoading]);
-
-  // ✅ Hide loader (optionally mark as timeout error)
-  const hideLoader = (timedOut = false) => {
-    clearTimeout(timeoutRef.current);
-    setIsLoading(false);
-    // Only set error if truly failed (onError), not just timeout
-    if (!timedOut) setHasTimeoutError(false);
-    else setHasTimeoutError(true);
-  };
-
-  // 👆 Play/pause toggle on click
-  const togglePlay = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.paused) {
-      video
-        .play()
-        .then(() => setIsPlaying?.(true))
-        .catch((err) => {
-          console.error('❌ play error:', err);
-          setIsPlaying?.(false);
-        });
-    } else {
-      video.pause();
-      setIsPlaying?.(false);
-    }
-  };
-
-  // Hide instructions on any user interaction (click/tap/keydown)
-  useEffect(() => {
-    if (!showInstructions) return;
-    let timeout;
-    const hide = () => setShowInstructions(false);
-    window.addEventListener('pointerdown', hide, { once: true });
-    window.addEventListener('keydown', hide, { once: true });
-    // Auto-hide after 8 seconds (enough for all lines to animate in)
-    timeout = setTimeout(() => setShowInstructions(false), 8000);
+    if (!video || !setIsPlaying) return;
+    
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+    
     return () => {
-      window.removeEventListener('pointerdown', hide, { once: true });
-      window.removeEventListener('keydown', hide, { once: true });
-      clearTimeout(timeout);
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
     };
-  }, [showInstructions]);
+  }, [setIsPlaying]);
 
-  // Track when loader/instructions are hidden
+  // Simple play/pause control
   useEffect(() => {
-    if (!isLoading && !showInstructions && !hasTimeoutError) {
-      onLoaderHidden?.();
+    const video = videoRef.current;
+    if (!video || isReplaying) return; // Don't interfere during replay
+
+    // Skip if already in desired state
+    if ((isPlaying && !video.paused) || (!isPlaying && video.paused)) {
+      return;
     }
-  }, [isLoading, showInstructions, hasTimeoutError, onLoaderHidden]);
 
-  // Show skeleton only when loader/instructions are hidden AND video is playing
-  const [skeletonReady, setSkeletonReady] = useState(false);
-  useEffect(() => {
-    if (!isLoading && !showInstructions && !hasTimeoutError) {
-      setSkeletonReady(true);
+    if (isPlaying) {
+      video.play().catch(console.warn);
     } else {
-      setSkeletonReady(false);
+      video.pause();
     }
-  }, [isLoading, showInstructions, hasTimeoutError]);
+  }, [isPlaying, isReplaying]);
+
+  const showLoader = !videoReady && !hasError && !hasEverBeenReady;
+  
+  // Debug logging for loader state
+  useEffect(() => {
+    console.log('Loader state:', { showLoader, videoReady, hasError, loadProgress, hasEverBeenReady });
+  }, [showLoader, videoReady, hasError, loadProgress, hasEverBeenReady]);
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
-      {/* ⏳ Loader overlay */}
+      {/* Simple loader overlay */}
       <div
         className={`absolute inset-0 z-10 flex items-center justify-center bg-black/80 text-white text-sm transition-opacity duration-500 ${
-          isLoading || (showInstructions && !hasTimeoutError)
-            ? 'opacity-100 pointer-events-auto'
-            : 'opacity-0 pointer-events-none'
+          showLoader ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
-        <div className="flex flex-col items-center space-y-3 w-3/4 max-w-xs">
-          {/* Progress bar */}
-          <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-400 transition-all duration-200"
-              style={{ width: `${Math.round(loadProgress * 100)}%` }}
-            />
-          </div>
+        <div className="flex flex-col items-center space-y-3 w-3/4 max-w-xs px-4">
+          {!hasError && (
+            <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-400 transition-all duration-200"
+                style={{ width: `${Math.round(loadProgress)}%` }}
+              />
+            </div>
+          )}
+          
           <div className="text-base font-medium text-center">
-            {hasTimeoutError
-              ? '⚠️ Failed to load video.'
-              : isLoading
-                ? loadProgress >= 1
-                  ? 'Still loading...'
-                  : 'Loading your swing…'
-                  : null}
+            {hasError ? '⚠️ Failed to load video.' : 'Loading your swing…'}
           </div>
-          {/* Instructional text */}
-          {showInstructions && !hasTimeoutError && (
+          
+          {showInstructions && !hasError && (
             <div
               className="text-xs text-white/80 text-center mt-1 cursor-pointer select-none"
               onClick={() => setShowInstructions(false)}
               role="button"
               tabIndex={0}
               onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setShowInstructions(false)}
-              aria-label="Dismiss instructions"
             >
-              <span className="block opacity-0 animate-fadein [animation-delay:0.2s] [animation-duration:2.2s]">Mark Your 5 Key Swing Moments:</span>
-              <span className="block font-semibold opacity-0 animate-fadein [animation-delay:2.5s] [animation-duration:2.2s]">Setup, Backswing, Apex, Downswing, & Follow-through.</span>
-              <span className="block opacity-0 animate-fadein [animation-delay:4.8s] [animation-duration:2.2s]">Scrub to each on the timeline, then tap the matching button to lock it in.</span>
+              <span className="block">Mark Your 5 Key Swing Moments:</span>
+              <span className="block font-semibold">Setup, Backswing, Apex, Downswing, & Follow-through.</span>
+              <span className="block">Scrub to each on the timeline, then tap the matching button to lock it in.</span>
             </div>
           )}
-          {!videoUrl && <div className="text-red-400 mt-2">No videoUrl provided</div>}
         </div>
       </div>
 
-      {/* 🎥 Video element */}
       <video
         ref={videoRef}
         src={videoUrl || '/videos/test-clip.mp4'}
         preload="auto"
-        muted
-        playsInline
+        muted={true}
+        playsInline={true}
         controls={false}
-        crossOrigin="anonymous"
-        className="w-full h-full object-contain outline-none"
-        tabIndex={0}
-        aria-label="Video player"
-        role="region"
-        aria-live="polite"
-        onKeyDown={(e) => {
-          // Space/Enter toggles play, left/right seek
-          if (e.code === 'Space' || e.code === 'Enter') {
-            e.preventDefault();
-            togglePlay();
-          } else if (e.code === 'ArrowLeft') {
-            e.preventDefault();
-            videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 5);
-          } else if (e.code === 'ArrowRight') {
-            e.preventDefault();
-            videoRef.current.currentTime = Math.min(
-              videoRef.current.duration || 0,
-              videoRef.current.currentTime + 5
-            );
+        className="w-full max-w-full h-auto object-contain outline-none max-h-[80vh] sm:max-w-[530px] sm:max-h-[80vh]"
+        style={{ margin: '0 auto', display: 'block' }}
+        onError={onError}
+        onLoadStart={onLoadStart}
+        onLoadedMetadata={() => {
+          if (videoRef.current?.duration && !hasSetDuration.current) {
+            hasSetDuration.current = true;
+            setDuration?.(videoRef.current.duration);
           }
         }}
-        onLoadedData={() => {
-          setIsLoading(false);
-          setHasTimeoutError(false);
-        }}
-        onCanPlay={() => {
-          if (isLoading) {
-            setIsLoading(false);
-            setHasTimeoutError(false);
-          }
-        }}
-        onError={(e) => {
-          setHasTimeoutError(true);
-          setIsLoading(false);
-        }}
-        onContextMenu={(e) => e.preventDefault()}
+        onContextMenu={e => e.preventDefault()}
       />
-      {/* Controls overlay (custom) */}
-      {/* Play/Pause button removed from center overlay */}
     </div>
   );
 });
 
 export default SwingPlayer;
-
-/* --- FADE-IN ANIMATION INSTRUCTIONS ---
-// To enable the instructional text fade-in animation, add the following to your app/globals.css:
-//
-// @layer utilities {
-//   @keyframes fadein {
-//     from { opacity: 0; }
-//     to { opacity: 1; }
-//   }
-//   .animate-fadein {
-//     animation: fadein 0.7s ease forwards;
-//   }
-// }
-//
-// Or, if you prefer, extend your tailwind.config.js as follows:
-//
-// theme: {
-//   extend: {
-//     keyframes: {
-//       fadein: {
-//         '0%': { opacity: '0' },
-//         '100%': { opacity: '1' },
-//       },
-//     },
-//     animation: {
-//       fadein: 'fadein 0.7s ease forwards',
-//     },
-//   },
-// },
-//
-// Then restart your dev server to apply the changes.
-//
-// No spinner will be shown; the loader uses only the progress bar and animated instructional text.
-*/

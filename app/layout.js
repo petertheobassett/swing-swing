@@ -1,4 +1,5 @@
 import './globals.css';
+import Header from '@/components/Header';
 
 // ✅ Metadata is used by Next.js for SEO and automatic head population (not rendered manually)
 export const metadata = {
@@ -13,9 +14,13 @@ export default function RootLayout({ children }) {
       <head>
         {/* ✅ CRUCIAL: This ensures mobile browsers use the actual screen width */}
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        {/* Preload critical resources */}
+        <link rel="preload" href="/swing-swing-logo.svg" as="image" />
+        {/* Use prefetch instead of preload for video since 'as="video"' is not supported */}
+        <link rel="prefetch" href="/videos/test-clip.mp4" />
       </head>
-
-      <body> 
+      <body>
+        <Header />
         {/* ✅ This renders your actual page content */}
         {children}
       </body>

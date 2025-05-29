@@ -11,3 +11,191 @@
     animation: fadein 0.7s ease forwards;
   }
 }
+
+/* --- Modern Pill-Style Button System (Blue Themed) --- */
+
+/**
+ * .ui-btn-pill         - Outline, blue border, blue text, pill shape
+ * .ui-btn-pill-filled  - Filled, blue background, white text, pill shape
+ * .ui-btn-pill:disabled, .ui-btn-pill-filled:disabled - Gray, pill shape
+ * 
+ * All buttons: fully rounded, large tap targets, smooth transitions, mobile optimized.
+ */
+
+.ui-btn-pill,
+.ui-btn-pill-filled {
+  border-radius: 9999px; /* pill shape */
+  font-weight: 700;
+  font-size: 1.1rem;
+  min-height: 48px;
+  min-width: 140px;
+  padding: 0 2.25em;
+  outline: none;
+  box-shadow: none;
+  border-width: 2px;
+  transition: background 0.16s, color 0.16s, border-color 0.16s, box-shadow 0.16s;
+  cursor: pointer;
+  display: inline-block;
+  text-align: center;
+  letter-spacing: -0.01em;
+  touch-action: manipulation;
+  user-select: none;
+  border-style: solid;
+}
+
+/* Outline style */
+.ui-btn-pill {
+  background: #fff;
+  border: 2px solid #2353d9;
+  color: #2353d9;
+}
+.ui-btn-pill:hover,
+.ui-btn-pill:focus {
+  background: #e6edfc;
+  border-color: #2353d9;
+  color: #2353d9;
+}
+
+/* Filled style (active) */
+.ui-btn-pill-filled {
+  background: #2353d9;
+  border: 2px solid #2353d9;
+  color: #fff;
+}
+.ui-btn-pill-filled:hover,
+.ui-btn-pill-filled:focus {
+  background: #1a3fa2;
+  border-color: #1a3fa2;
+  color: #fff;
+}
+
+/* Disabled state for both */
+.ui-btn-pill:disabled,
+.ui-btn-pill-filled:disabled {
+  background: #f2f3f7;
+  border-color: #e5e7eb;
+  color: #b1b1b1;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+/* Responsive: Mobile size adjustments */
+@media (max-width: 480px) {
+  .ui-btn-pill,
+  .ui-btn-pill-filled {
+    font-size: 1rem;
+    min-height: 42px;
+    min-width: 112px;
+    padding: 0 1.2em;
+    border-radius: 9999px;
+  }
+}
+
+.ui-progress-bar {
+  position: relative;
+  width: 90%;
+  height: 14px;
+  background: #e5e7eb;
+  border-radius: 7px;
+  cursor: pointer;
+  overflow: visible;
+  margin: 0 12px;
+  display: flex;
+  align-items: center;
+}
+
+.ui-progress-bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: #3b82f6;
+  border-radius: 7px;
+  transition: width 0.15s;
+  z-index: 1;
+}
+
+.ui-progress-bar-thumb {
+  position: absolute;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  background: #fff;
+  border: 2px solid #3b82f6;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0,0,0,0.17);
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  transition: transform 0.15s;
+}
+
+/* --- Swing Phase Button Grid --- */
+
+.ui-phase-grid {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  margin-top: 24px; /* Increased top margin for better separation */
+  justify-content: space-between;
+}
+
+.ui-phase-grid .ui-btn-pill {
+  flex: 1;
+  min-width: 0; /* Allow buttons to shrink below default min-width */
+  font-size: 0.75rem; /* Smaller font to fit better */
+  padding: 8px 4px;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap; /* Prevent text wrapping */
+}
+
+/* Responsive adjustments for very small screens */
+@media (max-width: 380px) {
+  .ui-phase-grid {
+    gap: 4px;
+  }
+  
+  .ui-phase-grid .ui-btn-pill {
+    font-size: 0.7rem;
+    padding: 6px 2px;
+    min-height: 44px;
+  }
+}
+
+/* --- Error and Loading States --- */
+
+.ui-error {
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.ui-loading {
+  background: rgba(59, 130, 246, 0.9);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.ui-absolute-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
