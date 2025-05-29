@@ -517,9 +517,14 @@ export default function ComparePage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        paddingBottom: "env(safe-area-inset-bottom)",
+        position: "relative"
       }}
     >
-      <div className="w-full max-w-[430px] mx-auto px-4 flex flex-col items-center" style={{ gap: '24px' }}>
+      <div className="w-full max-w-[430px] mx-auto px-4 flex flex-col items-center md:pb-0 pb-24" style={{ 
+        gap: '24px',
+        paddingBottom: "calc(env(safe-area-inset-bottom) + var(--mobile-padding, 96px))"
+      }}>
         <div
           className="relative"
           style={{
@@ -669,10 +674,10 @@ export default function ComparePage() {
           {/* Controls */}
           <div
             className="relative mt-4 flex flex-col items-center justify-center w-full gap-3"
-            style={{ marginBottom: 32 }} // Further increased bottom margin to prevent overlap
+            style={{ marginBottom: "calc(env(safe-area-inset-bottom) + var(--controls-margin, 112px))" }} // Responsive margin
           >
-            {/* Main playback controls */}
-            <div className="flex flex-row items-center justify-center w-full gap-3">
+            {/* Main playback controls - with bottom margin for small screens */}
+            <div className="flex flex-row items-center justify-center w-full gap-3 mb-6">
               {/* Context-aware play/replay button */}
               <button
                 className="ui-btn-pill"
@@ -687,10 +692,10 @@ export default function ComparePage() {
                 }
                 tabIndex={0}
                 style={{
-                  width: 52,
-                  height: 52,
-                  minWidth: 52,
-                  minHeight: 52,
+                  width: 40,
+                  height: 40,
+                  minWidth: 40,
+                  minHeight: 40,
                   borderWidth: 2,
                   padding: 0,
                   display: "flex",
@@ -870,8 +875,11 @@ export default function ComparePage() {
           )}
         </div>
 
-        {/* Phase buttons */}
-        <div className="ui-phase-grid">
+        {/* Phase buttons - fixed position only on mobile screens */}
+        <div className="ui-phase-grid md:static fixed bottom-0 left-0 right-0 bg-white px-4 md:px-0 z-40 md:z-auto md:bg-transparent md:border-0" style={{ 
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)",
+          borderTop: "1px solid #e5e7eb"
+        }}>
           {swingPhases.map((phase) => (
             <button
               key={phase}

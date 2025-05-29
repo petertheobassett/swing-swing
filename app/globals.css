@@ -139,8 +139,35 @@
   display: flex;
   gap: 6px;
   width: 100%;
-  margin-top: 24px; /* Increased top margin for better separation */
   justify-content: space-between;
+  background-color: #fff;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  z-index: 50; /* Ensure it's above other elements */
+}
+
+/* Desktop styles */
+@media (min-width: 768px) {
+  .ui-phase-grid {
+    box-shadow: none;
+    background-color: transparent;
+    padding-top: 12px;
+    padding-bottom: 0;
+    border-top: none !important;
+  }
+  
+  :root {
+    --controls-margin: 24px;
+    --mobile-padding: 0px;
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 767px) {
+  :root {
+    --controls-margin: 112px;
+    --mobile-padding: 96px;
+  }
 }
 
 .ui-phase-grid .ui-btn-pill {
@@ -161,12 +188,28 @@
 @media (max-width: 380px) {
   .ui-phase-grid {
     gap: 4px;
+    padding-top: 6px;
+    padding-bottom: 6px;
   }
   
   .ui-phase-grid .ui-btn-pill {
     font-size: 0.7rem;
     padding: 6px 2px;
-    min-height: 44px;
+    min-height: 40px; /* Reduced height to take less space */
+  }
+}
+
+/* Even smaller screens like iPhone Mini */
+@media (max-width: 360px) {
+  .ui-phase-grid {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  
+  .ui-phase-grid .ui-btn-pill {
+    font-size: 0.65rem;
+    padding: 4px 1px;
+    min-height: 38px; /* Further reduced height for tiny screens */
   }
 }
 
