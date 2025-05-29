@@ -512,25 +512,26 @@ export default function ComparePage() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "100svh", /* Use svh instead of vh to account for browser chrome */
         background: "#f9f9f9",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         paddingBottom: "env(safe-area-inset-bottom)",
-        position: "relative"
+        position: "relative",
+        overflow: "hidden" /* Prevent scrolling */
       }}
     >
-      <div className="w-full max-w-[430px] mx-auto px-4 flex flex-col items-center md:pb-0 pb-24" style={{ 
-        gap: '24px',
-        paddingBottom: "calc(env(safe-area-inset-bottom) + var(--mobile-padding, 96px))"
+      <div className="w-full max-w-[430px] mx-auto px-4 flex flex-col items-center md:pb-0 pb-16" style={{ 
+        gap: '16px', /* Reduced gap from 24px to 16px */
+        paddingBottom: "calc(env(safe-area-inset-bottom) + var(--mobile-padding, 80px))"
       }}>
         <div
           className="relative"
           style={{
             width: "100%",
             aspectRatio: "9/16",
-            maxHeight: "78vh",
+            maxHeight: "70svh", /* Use svh instead of vh and reduce from 78 to 70 */
             marginBottom: 0, // Remove bottom margin since we're using gap in parent
             display: "flex",
             flexDirection: "column",
@@ -875,9 +876,10 @@ export default function ComparePage() {
           )}
         </div>
 
-        {/* Phase buttons - fixed position only on mobile screens */}
+        {/* Phase buttons - fixed position only on mobile screens with better chrome handling */}
         <div className="ui-phase-grid md:static fixed bottom-0 left-0 right-0 bg-white px-4 md:px-0 z-40 md:z-auto md:bg-transparent md:border-0" style={{ 
-          paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)",
+          paddingBottom: "max(env(safe-area-inset-bottom), 8px)",
+          paddingTop: "8px",
           borderTop: "1px solid #e5e7eb"
         }}>
           {swingPhases.map((phase) => (

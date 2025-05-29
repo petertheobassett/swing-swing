@@ -165,8 +165,13 @@
 /* Mobile styles */
 @media (max-width: 767px) {
   :root {
-    --controls-margin: 112px;
-    --mobile-padding: 96px;
+    --controls-margin: 90px; /* Reduced from 112px */
+    --mobile-padding: 80px; /* Reduced from 96px */
+  }
+  
+  /* Make phase buttons more compact on mobile */
+  .ui-phase-grid .ui-btn-pill {
+    min-height: 42px;
   }
 }
 
