@@ -30,6 +30,7 @@ export default function ComparePage() {
   const [showSkeleton, setShowSkeleton] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
@@ -513,19 +514,19 @@ export default function ComparePage() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#f9f9f9",
+        background: "transparent",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
       }}
     >
-      <div className="w-full max-w-[430px] mx-auto px-4 flex flex-col items-center" style={{ gap: '24px' }}>
+      <div className="w-full max-w-[430px] mx-auto px-1 flex flex-col items-center" style={{ gap: '5px' }}>
         <div
           className="relative"
           style={{
             width: "100%",
             aspectRatio: "9/16",
-            maxHeight: "78vh",
+            maxHeight: "100vh",
             marginBottom: 0, // Remove bottom margin since we're using gap in parent
             display: "flex",
             flexDirection: "column",
@@ -555,11 +556,11 @@ export default function ComparePage() {
                 style={{ 
                   zIndex: 20,
                   // Position Hogan slightly to the right and scale down to match user video
-                  transform: `translateX(15%) scale(0.5)`,
+                  transform: `translateX(15%) scale(0.475)`,
                   transformOrigin: 'center center',
                   // Advanced masking with blend modes for better overlay
                   mixBlendMode: 'multiply',
-                  opacity: 0.8
+                  opacity: 0.85
                 }}
               >
                 <div 
@@ -568,7 +569,7 @@ export default function ComparePage() {
                     // Enhanced filtering for better overlay visibility
                     filter: 'contrast(1.3) saturate(0.7) brightness(1.1)',
                     // Create an elliptical mask around the golfer
-                    clipPath: 'ellipse(40% 60% at 50% 50%)',
+                    clipPath: 'ellipse(45% 47% at 50% 50%)',
                     // Subtle background fade
                     background: 'radial-gradient(ellipse 40% 60% at 50% 50%, transparent 70%, rgba(255,255,255,0.1) 90%)'
                   }}
@@ -603,13 +604,13 @@ export default function ComparePage() {
           {comparisonMode && (
             <div 
               className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-3 rounded-b-lg"
-              style={{ zIndex: 30 }}
+              style={{ zIndex: 90 }}
             >
               <div className="flex flex-col items-center gap-2 w-full">
                 {/* Speed controls and status in one row */}
                 <div className="flex items-center justify-between w-full max-w-md">
                   {/* Speed controls */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2"> 
                     <span className="text-xs font-medium text-white bg-black bg-opacity-30 px-2 py-1 rounded">Speed:</span>
                     {PLAYBACK_SPEEDS.map((speed) => (
                       <button
@@ -668,11 +669,19 @@ export default function ComparePage() {
 
           {/* Controls */}
           <div
-            className="relative mt-4 flex flex-col items-center justify-center w-full gap-3"
-            style={{ marginBottom: 32 }} // Further increased bottom margin to prevent overlap
+            className="absolute flex flex-col items-center justify-center w-full gap-1"
+            style={{ 
+              maxWidth: "400px",
+              bottom: "10%", // Position from bottom, adjust as needed
+              left: 10,
+              zIndex: 40,
+              background: 'transparent', // Semi-transparent background
+              padding: '15px 0',
+              borderRadius: '8px'
+            }}
           >
             {/* Main playback controls */}
-            <div className="flex flex-row items-center justify-center w-full gap-3">
+            <div className="flex flex-row items-center justify-center w-[87%] gap-1">
               {/* Context-aware play/replay button */}
               <button
                 className="ui-btn-pill"
@@ -687,10 +696,10 @@ export default function ComparePage() {
                 }
                 tabIndex={0}
                 style={{
-                  width: 52,
-                  height: 52,
-                  minWidth: 52,
-                  minHeight: 52,
+                  width: 50,
+                  height: 50,
+                  minWidth: 50,
+                  minHeight: 50,
                   borderWidth: 2,
                   padding: 0,
                   display: "flex",
@@ -732,7 +741,7 @@ export default function ComparePage() {
                 className="ui-progress-bar"
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  setIsDragging(true);
+                  isDraggingRef.current = true;
                   handleDrag(e);
                 }}
                 onMouseMove={(e) => {
@@ -740,12 +749,15 @@ export default function ComparePage() {
                 }}
                 style={{
                   flex: 1,
-                  height: 16,
+                  height: 19,
                   background: "#e5e7eb",
                   borderRadius: 8,
                   position: "relative",
                   cursor: "pointer",
                   touchAction: "none",
+                  minWidth: "100px", /* Ensure minimum width */
+                  display: "flex",
+                  alignItems: "center"
                 }}
               >
                 {/* Progress fill */}
@@ -868,29 +880,40 @@ export default function ComparePage() {
               </div>
             </div>
           )}
-        </div>
 
-        {/* Phase buttons */}
-        <div className="ui-phase-grid">
-          {swingPhases.map((phase) => (
-            <button
-              key={phase}
-              onClick={() => handleMarkPhase(phase)}
-              onKeyDown={(e) => handlePhaseKey(e, phase)}
-              className="ui-btn-pill"
-              aria-label={`Mark phase ${phase}${
-                phases[phase] ? ` (currently at ${phases[phase]}s)` : ""
-              }`}
-              tabIndex={0}
-            >
-              <span className="font-semibold text-xs leading-tight">
-                {phase}
-              </span>
-              <span className="text-[10px] text-neutral-500 block">
-                {phases[phase] ? `${phases[phase]}s` : "—"}
-              </span>
-            </button>
-          ))}
+          {/* Phase buttons - positioned to float over video */}
+          <div 
+            className="absolute flex items-center justify-center w-full"
+            style={{ 
+              bottom: "20%", // Position from bottom, above the playback controls
+              zIndex: 45, // Higher than other UI elements
+              background: 'transparent', // transparent background
+              padding: '4px 4px',
+              borderRadius: '4px'
+            }}
+          >
+            <div className="ui-phase-grid">
+              {swingPhases.map((phase) => (
+                <button
+                  key={phase}
+                  onClick={() => handleMarkPhase(phase)}
+                  onKeyDown={(e) => handlePhaseKey(e, phase)}
+                  className="ui-btn-pill"
+                  aria-label={`Mark phase ${phase}${
+                    phases[phase] ? ` (currently at ${phases[phase]}s)` : ""
+                  }`}
+                  tabIndex={0}
+                >
+                  <span className="font-semibold text-xs leading-tight">
+                    {phase}
+                  </span>
+                  <span className="text-[10px] text-[#E4572E] block">
+                    {phases[phase] ? `${phases[phase]}s` : "—"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

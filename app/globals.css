@@ -12,6 +12,10 @@
   }
 }
 
+video {
+  object-fit: cover;
+}
+
 /* --- Modern Pill-Style Button System (Blue Themed) --- */
 
 /**
@@ -21,6 +25,7 @@
  * 
  * All buttons: fully rounded, large tap targets, smooth transitions, mobile optimized.
  */
+
 
 .ui-btn-pill,
 .ui-btn-pill-filled {
@@ -32,7 +37,7 @@
   padding: 0 2.25em;
   outline: none;
   box-shadow: none;
-  border-width: 2px;
+  border-width: 1px;
   transition: background 0.16s, color 0.16s, border-color 0.16s, box-shadow 0.16s;
   cursor: pointer;
   display: inline-block;
@@ -46,33 +51,33 @@
 /* Outline style */
 .ui-btn-pill {
   background: #fff;
-  border: 2px solid #2353d9;
-  color: #2353d9;
+  border: 1px solid #012135;
+  color: #012135;
 }
 .ui-btn-pill:hover,
 .ui-btn-pill:focus {
   background: #e6edfc;
-  border-color: #2353d9;
-  color: #2353d9;
+  border-color: #012135;
+  color: #012135;
 }
 
 /* Filled style (active) */
 .ui-btn-pill-filled {
-  background: #2353d9;
-  border: 2px solid #2353d9;
-  color: #fff;
+  background: #CCE0E4;
+  border: 1px solid #012135;
+  color: #CCE0E4;
 }
 .ui-btn-pill-filled:hover,
 .ui-btn-pill-filled:focus {
-  background: #1a3fa2;
-  border-color: #1a3fa2;
-  color: #fff;
+  background: #CCE0E4;
+  border-color: #012135;
+  color: #CCE0E4;
 }
 
 /* Disabled state for both */
 .ui-btn-pill:disabled,
 .ui-btn-pill-filled:disabled {
-  background: #f2f3f7;
+  background: #CCE0E4;
   border-color: #e5e7eb;
   color: #b1b1b1;
   cursor: not-allowed;
@@ -92,10 +97,10 @@
 }
 
 .ui-progress-bar {
-  position: relative;
+  position: fixed;
   width: 90%;
   height: 14px;
-  background: #e5e7eb;
+  background: #CCE0E4;
   border-radius: 7px;
   cursor: pointer;
   overflow: visible;
@@ -109,7 +114,7 @@
   left: 0;
   top: 0;
   height: 100%;
-  background: #3b82f6;
+  background: #E4572E;
   border-radius: 7px;
   transition: width 0.15s;
   z-index: 1;
@@ -118,12 +123,11 @@
 .ui-progress-bar-thumb {
   position: absolute;
   top: 50%;
-  width: 22px;
-  height: 22px;
-  background: #fff;
-  border: 2px solid #3b82f6;
+  width: 55px;
+  height: 55px;
+  background: url('/golf-ball-playhead.svg') no-repeat center center;
+  background-size: contain;
   border-radius: 50%;
-  box-shadow: 0 0 4px rgba(0,0,0,0.17);
   transform: translate(-50%, -50%);
   z-index: 2;
   display: flex;
@@ -136,16 +140,21 @@
 /* --- Swing Phase Button Grid --- */
 
 .ui-phase-grid {
+  position: relative;
   display: flex;
-  gap: 6px;
-  width: 100%;
+  gap: 10px;
+  width: 87%;
   margin-top: 24px; /* Increased top margin for better separation */
-  justify-content: space-between;
+  margin-bottom: 20px; /* Increased bottom margin for better separation */
+  justify-content: center;
+  background: "transparent";
 }
 
 .ui-phase-grid .ui-btn-pill {
-  flex: 1;
+  flex: 0 0 auto; /* Prevent flex items from growing */
+  width: 55px;
   min-width: 0; /* Allow buttons to shrink below default min-width */
+  aspect-ratio: 1 / 1; /* Maintain square aspect ratio */
   font-size: 0.75rem; /* Smaller font to fit better */
   padding: 8px 4px;
   min-height: 48px;
@@ -160,14 +169,19 @@
 /* Responsive adjustments for very small screens */
 @media (max-width: 380px) {
   .ui-phase-grid {
-    gap: 4px;
+    gap: 1px;
+    justify-content: space-between;
   }
   
   .ui-phase-grid .ui-btn-pill {
     font-size: 0.7rem;
-    padding: 6px 2px;
-    min-height: 44px;
+    aspect-ratio: 1 / 1;
+    padding: 2px 1px;
+    min-height: 40px;
   }
+  body {
+  overflow: hidden;
+}
 }
 
 /* --- Error and Loading States --- */
@@ -183,7 +197,7 @@
 }
 
 .ui-loading {
-  background: rgba(59, 130, 246, 0.9);
+  background: rgba(1, 33, 53, 0.9);
   color: white;
   padding: 8px 16px;
   border-radius: 8px;
