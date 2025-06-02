@@ -518,6 +518,7 @@ export default function ComparePage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        overflow: "hidden", // Prevent scrollbars
       }}
     >
       <div className="w-full max-w-[430px] mx-auto px-1 flex flex-col items-center" style={{ gap: '5px' }}>

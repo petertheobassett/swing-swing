@@ -179,9 +179,6 @@ video {
     padding: 2px 1px;
     min-height: 40px;
   }
-  body {
-  overflow: hidden;
-}
 }
 
 /* --- Error and Loading States --- */

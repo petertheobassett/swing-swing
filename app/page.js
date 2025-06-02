@@ -105,7 +105,7 @@ export default function Home() {
             style={{ display: "none" }}
           />
           <button
-            className="ui-btn-pill-filled"
+            className="ui-btn-pill"
             onClick={recording ? stopRecording : startRecording}
             type="button"
           >
@@ -143,7 +143,7 @@ export default function Home() {
               }}
               type="button"
             >
-              Analyze My Swing →
+              Compare My Swing →
             </button>
           </div>
         )}
