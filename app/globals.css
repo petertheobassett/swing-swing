@@ -194,12 +194,11 @@ video {
 }
 
 .ui-loading {
-  background: rgba(1, 33, 53, 0.9);
   color: white;
   padding: 8px 16px;
   border-radius: 8px;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 400;
   text-align: center;
 }
 

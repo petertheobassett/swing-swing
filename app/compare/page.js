@@ -552,9 +552,23 @@ export default function ComparePage() {
         >
           {/* Instructional overlay: show until Setup is marked, but only after video loader is hidden and video is loaded */}
           {(showInstruction && !phases.Setup && !isLoading && !isReplaying && !showSkeleton && duration > 0) && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 z-30 rounded-xl">
-              <div className="ui-loading ui-absolute-center z-40">
-                Select your setup pose and click the <b>Setup</b> button to autodetect your swing
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 z-30 rounded-xl">
+              <div className="ui-loading ui-absolute-center z-40 flex flex-col items-center gap-4">
+                <div>
+                  Drag the golf ball along the timeline to find your <b>Setup</b> pose then click the <b>Setup</b> button to autodetect your swing
+                </div>
+                <button
+                  className="ui-btn-pill px-5 py-2 text-base font-semibold bg-blue-600 text-white rounded-full shadow hover:bg-blue-700 transition-colors"
+                  style={{ minWidth: 140 }}
+                  onClick={() => {
+                    setShowSkeleton(true);
+                    setLoadingSkeleton(true);
+                    // Optionally, you could also auto-mark Setup phase here if desired:
+                    // setPhases(prev => ({ ...prev, Setup: currentTime.toFixed(2) }));
+                  }}
+                >
+                  Start
+                </button>
               </div>
             </div>
           )}
@@ -701,62 +715,62 @@ export default function ComparePage() {
               borderRadius: '8px'
             }}
           >
-            {/* Main playback controls */}
             <div className="flex flex-row items-center justify-center w-[87%] gap-1">
-              {/* Context-aware play/replay button */}
-              <button
-                className="ui-btn-pill"
-                onClick={handlePlayPause}
-                onKeyDown={handlePlayPauseKey}
-                aria-label={
-                  allPhasesMarked && !isPlaying && !isReplaying
-                    ? "Replay swing from Setup to Follow" 
-                    : isPlaying 
-                      ? "Pause video" 
-                      : "Play video"
-                }
-                tabIndex={0}
-                style={{
-                  width: 50,
-                  height: 50,
-                  minWidth: 50,
-                  minHeight: 50,
-                  borderWidth: 2,
-                  padding: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  position: "relative",
-                }}
-                disabled={isReplaying}
-              >
-                {isReplaying ? (
-                  // Loading spinner during replay
-                  <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                ) : isPlaying ? (
-                  // Pause icon
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor" />
-                    <rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor" />
-                  </svg>
-                ) : allPhasesMarked ? (
-                  // Replay icon
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path 
-                      d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
-                      fill="currentColor"
-                    />
-                    <polygon points="10,10 14,12 10,14" fill="currentColor" />
-                  </svg>
-                ) : (
-                  // Play icon
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <polygon points="8,5 19,12 8,19" fill="currentColor" />
-                  </svg>
-                )}
-              </button>
-
-              {/* Progress bar */}
+              {/* Play/replay button: only show if all phases are marked */}
+              {allPhasesMarked && (
+                <button
+                  className="ui-btn-pill"
+                  onClick={handlePlayPause}
+                  onKeyDown={handlePlayPauseKey}
+                  aria-label={
+                    allPhasesMarked && !isPlaying && !isReplaying
+                      ? "Replay swing from Setup to Follow" 
+                      : isPlaying 
+                        ? "Pause video" 
+                        : "Play video"
+                  }
+                  tabIndex={0}
+                  style={{
+                    width: 50,
+                    height: 50,
+                    minWidth: 50,
+                    minHeight: 50,
+                    borderWidth: 2,
+                    padding: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
+                  }}
+                  disabled={isReplaying}
+                >
+                  {isReplaying ? (
+                    // Loading spinner during replay
+                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  ) : isPlaying ? (
+                    // Pause icon
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor" />
+                      <rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor" />
+                    </svg>
+                  ) : allPhasesMarked ? (
+                    // Replay icon
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path 
+                        d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
+                        fill="currentColor"
+                      />
+                      <polygon points="10,10 14,12 10,14" fill="currentColor" />
+                    </svg>
+                  ) : (
+                    // Play icon
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <polygon points="8,5 19,12 8,19" fill="currentColor" />
+                    </svg>
+                  )}
+                </button>
+              )}
+              {/* Progress bar and playhead: always visible */}
               <div
                 ref={progressBarRef}
                 className="ui-progress-bar"
@@ -788,7 +802,6 @@ export default function ComparePage() {
                     width: duration ? `${(currentTime / duration) * 100}%` : "0%",
                   }}
                 />
-                
                 {/* Golf ball thumb */}
                 <div
                   className="ui-progress-bar-thumb"

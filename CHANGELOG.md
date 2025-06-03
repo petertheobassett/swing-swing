@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.8] - 2025-06-03
+
+### Changed
+- The play/replay button is now hidden until all swing phases are marked for the first time, ensuring users must define all phases before playback is available.
+- The progress bar and playhead remain visible at all times, allowing users to scrub and select their setup phase before marking all phases.
+- Improved the workflow and clarity for marking swing phases and starting analysis.
+
 ## [0.0.7] - 2025-06-03
 
 ### Fixed & Improved
