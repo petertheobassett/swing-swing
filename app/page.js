@@ -98,7 +98,7 @@ export default function Home() {
         </div>
         {/* Instructional text */}
         <div className="w-3/4 mb-4 pb-4">
-          <h3 className="text-l font-bold mb-2 pb-2">Let's see your swing:</h3>
+          <h3 className="text-l font-bold mb-2 pb-2">Let&#39;s see your swing:</h3>
           <p className="text-sm text-gray-500 mb-4">
             Either upload a video clip or record one by tapping below.</p>
           <ul className="text-sm text-gray-500 list-none pl-0">
