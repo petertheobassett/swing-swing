@@ -87,7 +87,10 @@ const SwingPlayer = forwardRef(function SwingPlayer(
     setHasEverBeenReady(false); // Reset the "ever been ready" flag on URL change
 
     const handleReady = () => {
-      console.log('Video ready event fired, readyState:', video.readyState); // Debug log
+      // Only log when video is truly ready (readyState 4 = HAVE_ENOUGH_DATA)
+      if (video.readyState === 4) {
+        console.log('Video ready (HAVE_ENOUGH_DATA), readyState:', video.readyState);
+      }
       setVideoReady(true);
       setHasError(false);
       setLoadProgress(100); // Complete progress when ready
@@ -96,7 +99,7 @@ const SwingPlayer = forwardRef(function SwingPlayer(
     };
 
     const handleError = () => {
-      console.log('Video error event fired'); // Debug log
+      // console.log('Video error event fired'); // Debug log removed
       setHasError(true);
       setVideoReady(false);
     };
@@ -104,7 +107,10 @@ const SwingPlayer = forwardRef(function SwingPlayer(
     // Check if video is already ready (for cached videos)
     const checkIfReady = () => {
       if (video.readyState >= 3) { // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA
-        console.log('Video already ready on mount, readyState:', video.readyState);
+        // Only log if truly ready
+        if (video.readyState === 4) {
+          console.log('Video already ready on mount (HAVE_ENOUGH_DATA), readyState:', video.readyState);
+        }
         handleReady();
         return true;
       }
@@ -243,11 +249,6 @@ const SwingPlayer = forwardRef(function SwingPlayer(
 
   const showLoader = !videoReady && !hasError && !hasEverBeenReady;
   
-  // Debug logging for loader state
-  useEffect(() => {
-    console.log('Loader state:', { showLoader, videoReady, hasError, loadProgress, hasEverBeenReady });
-  }, [showLoader, videoReady, hasError, loadProgress, hasEverBeenReady]);
-
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
       {/* Simple loader overlay */}

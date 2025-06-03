@@ -42,6 +42,7 @@ export default function ComparePage() {
   const [userBodyMeasurements, setUserBodyMeasurements] = useState(null);
   const [hoganBodyMeasurements, setHoganBodyMeasurements] = useState(null);
   const [hoganPlaybackRate, setHoganPlaybackRate] = useState(1);
+  const [showInstruction, setShowInstruction] = useState(true);
 
   // Check if all phases are marked
   const allPhasesMarked = swingPhases.every((phase) => phases[phase]);
@@ -100,21 +101,6 @@ export default function ComparePage() {
     
     return rate;
   }, [allPhasesMarked, phases]);
-
-  // Apply Hogan's playback rate when comparison mode starts or phases change
-  useEffect(() => {
-    if (comparisonMode && allPhasesMarked) {
-      const newRate = calculateHoganPlaybackRate();
-      setHoganPlaybackRate(newRate);
-      
-      // Apply the rate to Hogan's video immediately
-      const hoganVideo = hoganVideoRef.current?.video;
-      if (hoganVideo) {
-        hoganVideo.playbackRate = newRate * playbackSpeed;
-        console.log('Applied Hogan playback rate:', newRate * playbackSpeed);
-      }
-    }
-  }, [comparisonMode, allPhasesMarked, phases, calculateHoganPlaybackRate, playbackSpeed]);
 
   // Check for uploaded video from main page on component mount
   useEffect(() => {
@@ -274,6 +260,10 @@ export default function ComparePage() {
     const backTime = parseFloat(phases.Back);
     const followTime = parseFloat(phases.Follow);
 
+    // Recalculate Hogan playback rate for this replay
+    const newHoganPlaybackRate = calculateHoganPlaybackRate();
+    setHoganPlaybackRate(newHoganPlaybackRate);
+
     console.log('Phase times:', { backTime, followTime, backRaw: phases.Back, followRaw: phases.Follow });
 
     if (isNaN(backTime) || isNaN(followTime) || backTime >= followTime) {
@@ -307,11 +297,18 @@ export default function ComparePage() {
         // Seek Hogan to his back time (not user's back time)
         const hoganBackTime = parseFloat(HOGAN_PHASE_TIMESTAMPS.Back);
         hoganVideo.currentTime = hoganBackTime;
-        console.log(`Seeking Hogan to his back time: ${hoganBackTime}s (user back: ${backTime}s)`);
       }
-      
-      // Brief wait for seek operations to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Brief wait for seek operations to complete (increased to 300ms for better sync on slow devices)
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // === Double-set currentTime for extra sync reliability ===
+      video.currentTime = backTime;
+      if (hoganVideo && comparisonMode) {
+        const hoganBackTime = parseFloat(HOGAN_PHASE_TIMESTAMPS.Back);
+        hoganVideo.currentTime = hoganBackTime;
+      }
+      // Log actual currentTime values for debugging (keep this one for now)
+      console.log('After double-set: user video at', video.currentTime, 'Hogan at', hoganVideo ? hoganVideo.currentTime : 'N/A');
 
       if (!video) {
         console.error('No video element available');
@@ -321,11 +318,10 @@ export default function ComparePage() {
 
       // Create and store the timeupdate listener  
       const handleTimeUpdate = () => {
-        console.log(`Replay timeupdate: currentTime=${video.currentTime}s, followTime=${followTime}s, paused=${video.paused}`);
-        
+        // console.log(`Replay timeupdate: currentTime=${video.currentTime}s, followTime=${followTime}s, paused=${video.paused}`); // Remove verbose log
         // Stop when user video reaches follow time
         if (video.currentTime >= followTime) {
-          console.log(`Replay complete at ${video.currentTime}s`);
+          // console.log(`Replay complete at ${video.currentTime}s`); // Remove verbose log
           // Use the stored reference for cleanup
           if (replayListenerRef.current) {
             video.removeEventListener('timeupdate', replayListenerRef.current);
@@ -350,9 +346,8 @@ export default function ComparePage() {
         // Apply correct playback rates - user video at normal speed, Hogan at calculated rate
         video.playbackRate = playbackSpeed;
         if (hoganVideo && comparisonMode) {
-          // Apply both the calculated rate and the user's speed setting
-          hoganVideo.playbackRate = hoganPlaybackRate * playbackSpeed;
-          console.log(`Applied Hogan playback rate: ${hoganPlaybackRate * playbackSpeed} (base rate: ${hoganPlaybackRate}, speed: ${playbackSpeed})`);
+          // Apply both the freshly calculated rate and the user's speed setting
+          hoganVideo.playbackRate = newHoganPlaybackRate * playbackSpeed;
         }
       
         // Start both videos simultaneously
@@ -360,24 +355,23 @@ export default function ComparePage() {
         if (hoganVideo && comparisonMode) {
           playPromises.push(hoganVideo.play());
         }
-        
         // Wait for both videos to start playing
         await Promise.all(playPromises);
-        console.log('Both videos started playing simultaneously from their respective back times');
-        console.log(`User video: ${video.currentTime.toFixed(2)}s at ${video.playbackRate}x speed`);
+        // Now set isPlaying true (after both videos are playing)
+        setIsPlaying(true);
+        // console.log('Both videos started playing simultaneously from their respective back times'); // Remove verbose log
+        // console.log(`User video: ${video.currentTime.toFixed(2)}s at ${video.playbackRate}x speed`); // Remove verbose log
         if (hoganVideo && comparisonMode) {
-          console.log(`Hogan video: ${hoganVideo.currentTime.toFixed(2)}s at ${hoganVideo.playbackRate}x speed`);
+          // console.log(`Hogan video: ${hoganVideo.currentTime.toFixed(2)}s at ${hoganVideo.playbackRate}x speed`); // Remove verbose log
         }
-        
-        console.log('Replay started successfully, video.paused:', video.paused, 'video.currentTime:', video.currentTime, 'playbackRate:', video.playbackRate);
-        
+        // console.log('Replay started successfully, video.paused:', video.paused, 'video.currentTime:', video.currentTime, 'playbackRate:', video.playbackRate); // Remove verbose log
         // Add a periodic check to monitor playback progress
         const progressCheck = setInterval(() => {
-          console.log(`Replay progress check: currentTime=${video.currentTime}s, paused=${video.paused}, playbackRate=${video.playbackRate}`);
+          // console.log(`Replay progress check: currentTime=${video.currentTime}s, paused=${video.paused}, playbackRate=${video.playbackRate}`); // Remove verbose log
           if (video.paused || video.currentTime >= followTime || !replayListenerRef.current) {
             clearInterval(progressCheck);
             if (video.currentTime >= followTime) {
-              console.log('Progress check detected completion, triggering cleanup');
+              // console.log('Progress check detected completion, triggering cleanup'); // Remove verbose log
               if (replayListenerRef.current) {
                 video.removeEventListener('timeupdate', replayListenerRef.current);
                 replayListenerRef.current = null;
@@ -407,6 +401,7 @@ export default function ComparePage() {
 
   // Handle main play/pause button
   const handlePlayPause = () => {
+    setShowInstruction(false);
     console.log('Play/pause clicked:', { allPhasesMarked, isPlaying, isReplaying });
     
     if (allPhasesMarked && !isPlaying && !isReplaying) {
@@ -516,6 +511,20 @@ export default function ComparePage() {
     }
   };
 
+  // Hide instructional overlay on any user interaction
+  useEffect(() => {
+    if (!showInstruction) return;
+    const hideInstruction = () => setShowInstruction(false);
+    window.addEventListener('mousedown', hideInstruction);
+    window.addEventListener('touchstart', hideInstruction);
+    window.addEventListener('keydown', hideInstruction);
+    return () => {
+      window.removeEventListener('mousedown', hideInstruction);
+      window.removeEventListener('touchstart', hideInstruction);
+      window.removeEventListener('keydown', hideInstruction);
+    };
+  }, [showInstruction]);
+
   return (
     <div
       style={{
@@ -541,6 +550,15 @@ export default function ComparePage() {
             alignItems: "center",
           }}
         >
+          {/* Instructional overlay: show until Setup is marked, but only after video loader is hidden and video is loaded */}
+          {(showInstruction && !phases.Setup && !isLoading && !isReplaying && !showSkeleton && duration > 0) && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 z-30 rounded-xl">
+              <div className="ui-loading ui-absolute-center z-40">
+                Select your setup pose and click the <b>Setup</b> button to autodetect your swing
+              </div>
+            </div>
+          )}
+
           {/* Main video container */}
           <div className="relative w-full h-full">
             <SwingPlayer
@@ -817,6 +835,18 @@ export default function ComparePage() {
                     setUserBodyMeasurements(measurements);
                   }
                 }
+              }}
+              onPhasesDetected={(detectedPhases) => {
+                // Only set phases that haven't been set by the user
+                setPhases((prev) => {
+                  const updated = { ...prev };
+                  for (const key in detectedPhases) {
+                    if (!updated[key]) {
+                      updated[key] = detectedPhases[key];
+                    }
+                  }
+                  return updated;
+                });
               }}
             />
           )}

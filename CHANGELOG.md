@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.7] - 2025-06-03
+
+### Fixed & Improved
+- **Suppressed Excessive Video Ready Logging**: Video ready event logs in SwingPlayer.js are now only shown when the video is truly ready (readyState 4), eliminating thousands of redundant logs and keeping the console clean.
+- **Loader & Playback Logic Cleanliness**: Removed or commented out all verbose loader and video ready logs. Loader and progress bar logic remains robust and user-friendly.
+- **Swing Phase Detection Tuning**: Maintained robust and accurate Follow phase detection and overall swing phase logic, with all changes reversible and codebase clean.
+- **No Breaking Changes**: All improvements are backward-compatible and maintain a clean, user-friendly experience.
+
 ## [0.0.6] - 2025-06-03
 
 ### Updated

@@ -36,6 +36,162 @@ const getVideoDisplayInfo = (video) => {
   };
 };
 
+// --- Enhanced auto phase detection utility ---
+function detectSwingPhasesFromPoses({poses, setupTime = 0}) {
+  if (!poses || poses.length < 5) {
+    // Not enough data, fallback to demo
+    return {
+      Setup: setupTime.toFixed(2),
+      Back: (setupTime + 0.5).toFixed(2),
+      Apex: (setupTime + 1.0).toFixed(2),
+      Impact: (setupTime + 1.2).toFixed(2),
+      Follow: (setupTime + 1.7).toFixed(2)
+    };
+  }
+
+  // Helper: get average y of valid keypoints
+  function getAvgY(pose, indices) {
+    const vals = indices.map(i => pose.keypoints[i]).filter(kp => kp && kp.score > 0.3);
+    if (!vals.length) return null;
+    return vals.reduce((sum, kp) => sum + kp.y, 0) / vals.length;
+  }
+
+  // Helper: get lead arm angle (shoulder-elbow-wrist)
+  function getLeadArmAngle(pose) {
+    // Assume right-handed (lead arm = left), fallback to right if left not visible
+    const lShoulder = pose.keypoints[5], lElbow = pose.keypoints[7], lWrist = pose.keypoints[9];
+    const rShoulder = pose.keypoints[6], rElbow = pose.keypoints[8], rWrist = pose.keypoints[10];
+    let a, b, c;
+    if (lShoulder?.score > 0.3 && lElbow?.score > 0.3 && lWrist?.score > 0.3) {
+      a = lShoulder; b = lElbow; c = lWrist;
+    } else if (rShoulder?.score > 0.3 && rElbow?.score > 0.3 && rWrist?.score > 0.3) {
+      a = rShoulder; b = rElbow; c = rWrist;
+    } else {
+      return null;
+    }
+    // Angle at elbow (in degrees)
+    const ab = {x: a.x - b.x, y: a.y - b.y};
+    const cb = {x: c.x - b.x, y: c.y - b.y};
+    const dot = ab.x * cb.x + ab.y * cb.y;
+    const magAB = Math.sqrt(ab.x * ab.x + ab.y * ab.y);
+    const magCB = Math.sqrt(cb.x * cb.x + cb.y * cb.y);
+    if (magAB === 0 || magCB === 0) return null;
+    let angle = Math.acos(dot / (magAB * magCB));
+    return angle * 180 / Math.PI;
+  }
+
+  // Build filtered/smoothed y and t arrays using weighted average of wrists, elbows, shoulders, and arm angle
+  const rawYs = poses.map(pose => {
+    const wristY = getAvgY(pose, [9, 10]);
+    const elbowY = getAvgY(pose, [7, 8]);
+    const shoulderY = getAvgY(pose, [5, 6]);
+    const armAngle = getLeadArmAngle(pose);
+    // Weighted sum: wrists (0.4), elbows (0.3), shoulders (0.2), arm angle (0.1, normalized)
+    let ySum = 0, wSum = 0;
+    if (wristY !== null) { ySum += wristY * 0.4; wSum += 0.4; }
+    if (elbowY !== null) { ySum += elbowY * 0.3; wSum += 0.3; }
+    if (shoulderY !== null) { ySum += shoulderY * 0.2; wSum += 0.2; }
+    // For arm angle, normalize to y-range (map 60-180 deg to 0-100 px, clamp)
+    if (armAngle !== null) {
+      const normAngle = Math.max(60, Math.min(180, armAngle));
+      ySum += ((180 - normAngle) / 120) * 100 * 0.1; // Higher angle (straighter arm) = lower y
+      wSum += 0.1;
+    }
+    return wSum > 0 ? ySum / wSum : null;
+  });
+  const times = poses.map((p, i) => p.timestamp !== undefined ? p.timestamp : (setupTime + i * 1/30));
+
+  // Simple moving average smoothing (window=3)
+  const smoothYs = rawYs.map((y, i, arr) => {
+    if (y === null) return null;
+    let sum = 0, count = 0;
+    for (let j = -1; j <= 1; ++j) {
+      if (arr[i + j] !== undefined && arr[i + j] !== null) {
+        sum += arr[i + j];
+        count++;
+      }
+    }
+    return count > 0 ? sum / count : y;
+  });
+
+  // 1. Detect Back: first significant move from setup
+  const setupY = smoothYs[0];
+  let backIdx = 1;
+  for (; backIdx < smoothYs.length; ++backIdx) {
+    if (setupY !== null && smoothYs[backIdx] !== null && Math.abs(smoothYs[backIdx] - setupY) > 10) break;
+  }
+
+  // 2. Detect Apex: local minimum in y after Back (velocity crosses 0)
+  let apexIdx = backIdx;
+  for (let i = backIdx + 1; i < smoothYs.length - 1; ++i) {
+    if (smoothYs[i-1] !== null && smoothYs[i] !== null && smoothYs[i+1] !== null) {
+      if (smoothYs[i] < smoothYs[i-1] && smoothYs[i] < smoothYs[i+1]) {
+        apexIdx = i;
+        break;
+      }
+    }
+  }
+
+  // 3. Detect Impact: local maximum in y after Apex (velocity crosses 0)
+  let impactIdx = apexIdx;
+  for (let i = apexIdx + 1; i < smoothYs.length - 1; ++i) {
+    if (smoothYs[i-1] !== null && smoothYs[i] !== null && smoothYs[i+1] !== null) {
+      if (smoothYs[i] > smoothYs[i-1] && smoothYs[i] > smoothYs[i+1]) {
+        impactIdx = i;
+        break;
+      }
+    }
+  }
+
+  // 4. Detect Follow: either wrist above head (y < head y) OR y stabilization, whichever comes first
+  let followIdx = impactIdx;
+  let foundFollow = false;
+  for (let i = impactIdx + 1; i < poses.length; ++i) {
+    const pose = poses[i];
+    const head = pose.keypoints[0]; // nose as head reference
+    const lw = pose.keypoints[9], rw = pose.keypoints[10];
+    // Check for either wrist above head
+    if (head?.score > 0.3 && ((lw?.score > 0.3 && lw.y < head.y) || (rw?.score > 0.3 && rw.y < head.y))) {
+      followIdx = i;
+      foundFollow = true;
+      break;
+    }
+    // Check for y stabilization (little change for 5+ frames)
+    if (i < smoothYs.length - 5 && smoothYs[i] !== null) {
+      let stable = true;
+      for (let j = 1; j <= 5; ++j) {
+        if (smoothYs[i + j] === null || Math.abs(smoothYs[i + j] - smoothYs[i]) > 5) {
+          stable = false;
+          break;
+        }
+      }
+      if (stable) {
+        followIdx = i;
+        foundFollow = true;
+        break;
+      }
+    }
+  }
+  // If not found, fallback to last frame
+  if (!foundFollow) {
+    followIdx = Math.max(impactIdx, Math.min(poses.length - 1, smoothYs.length - 1));
+  }
+
+  // Clamp indices
+  backIdx = Math.max(1, Math.min(backIdx, poses.length - 1));
+  apexIdx = Math.max(backIdx, Math.min(apexIdx, poses.length - 1));
+  impactIdx = Math.max(apexIdx, Math.min(impactIdx, poses.length - 1));
+  followIdx = Math.max(impactIdx, Math.min(followIdx, poses.length - 1));
+
+  return {
+    Setup: setupTime.toFixed(2),
+    Back: times[backIdx].toFixed(2),
+    Apex: times[apexIdx].toFixed(2),
+    Impact: times[impactIdx].toFixed(2),
+    Follow: times[followIdx].toFixed(2)
+  };
+}
+
 export default function MotionTracker({ 
   videoRef, 
   drawOnce = false, 
@@ -43,7 +199,8 @@ export default function MotionTracker({
   onComplete,
   isTransformed = false,
   transformScale = 1,
-  transformTranslateX = 0
+  transformTranslateX = 0,
+  onPhasesDetected // NEW: callback for auto phase detection
 }) {
   const canvasRef = useRef(null);
   const detectorRef = useRef(null);
@@ -123,6 +280,12 @@ export default function MotionTracker({
         if (poses.length && isMounted) {
           drawSkeleton(canvasRef.current, poses[0], video, isTransformed, transformScale, transformTranslateX);
           if (onComplete) onComplete(poses[0].keypoints);
+
+          // --- Auto phase detection ---
+          if (onPhasesDetected) {
+            const detectedPhases = detectSwingPhasesFromPoses({poses, setupTime: timestamp || 0});
+            onPhasesDetected(detectedPhases);
+          }
         }
       } else {
         const update = async () => {
@@ -170,7 +333,7 @@ export default function MotionTracker({
       isMounted = false;
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
     };
-  }, [videoRef, drawOnce, timestamp, onComplete, tfLoaded]);
+  }, [videoRef, drawOnce, timestamp, onComplete, tfLoaded, onPhasesDetected]);
 
   return (
     <canvas
@@ -195,17 +358,6 @@ function drawSkeleton(canvas, pose, video, isTransformed = false, transformScale
   const keypoints = pose.keypoints;
   const info = getVideoDisplayInfo(video);
   if (!info) return;
-  
-  // Debug logging for transformed skeletons
-  if (isTransformed) {
-    console.log('Hogan skeleton debug:', {
-      transformScale,
-      transformTranslateX,
-      canvasSize: { width: canvas.width, height: canvas.height },
-      videoInfo: info,
-      keypointsCount: keypoints.length
-    });
-  }
   
   // Set canvas to match displayed video size and account for device pixel ratio
   const dpr = window.devicePixelRatio || 1;
@@ -260,63 +412,12 @@ function drawSkeleton(canvas, pose, video, isTransformed = false, transformScale
       y = y / transformScale;
     }
     
-    // Debug log coordinates for ankle keypoints (leg visibility issue)
-    if (isTransformed && (kp === keypoints[15] || kp === keypoints[16])) {
-      const inBounds = x >= 0 && x <= canvasWidth && y >= 0 && y <= canvasHeight;
-      console.log(`Hogan ankle coordinate (${kp === keypoints[15] ? 'left' : 'right'}):`, {
-        original: { x: kp.x, y: kp.y },
-        mapped: { x, y },
-        score: kp.score,
-        canvasBounds: { width: canvasWidth, height: canvasHeight },
-        containerBounds: { width: info.rectWidth, height: info.rectHeight },
-        transformScale,
-        inBounds,
-        note: 'Canvas sized for full video, CSS transform will scale down',
-        videoDisplayInfo: video ? {
-          naturalWidth: video.videoWidth,
-          naturalHeight: video.videoHeight,
-          displayWidth: video.clientWidth,
-          displayHeight: video.clientHeight
-        } : null
-      });
-    }
-    
     return {
       x,
       y,
       score: kp.score,
     };
   };
-
-  // Debug: Log overall skeleton bounds for transformed skeleton
-  if (isTransformed && keypoints?.length > 0) {
-    const visibleKeypoints = keypoints.filter(kp => kp?.score > 0.3);
-    if (visibleKeypoints.length > 0) {
-      const mappedPoints = visibleKeypoints.map(kp => map(kp));
-      const bounds = {
-        minX: Math.min(...mappedPoints.map(p => p.x)),
-        maxX: Math.max(...mappedPoints.map(p => p.x)),
-        minY: Math.min(...mappedPoints.map(p => p.y)),
-        maxY: Math.max(...mappedPoints.map(p => p.y))
-      };
-      
-      // Log every 10 frames to avoid spam
-      if (Math.random() < 0.1) {
-        console.log('Hogan skeleton bounds (full-size canvas):', {
-          bounds,
-          canvasSize: { width: canvasWidth, height: canvasHeight },
-          containerSize: { width: info.rectWidth, height: info.rectHeight },
-          transformScale,
-          visibleKeypointCount: visibleKeypoints.length,
-          ankleKeypoints: {
-            left: keypoints[15]?.score > 0.3 ? map(keypoints[15]) : 'not visible',
-            right: keypoints[16]?.score > 0.3 ? map(keypoints[16]) : 'not visible'
-          },
-          note: 'Canvas is full-size, CSS transform scales down entire container'
-        });
-      }
-    }
-  }
 
   // Color configuration for left/right differentiation
   // Use different colors for transformed (Hogan) vs normal (user) skeletons
