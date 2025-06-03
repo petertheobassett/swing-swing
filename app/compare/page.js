@@ -37,7 +37,6 @@ export default function ComparePage() {
   const [confirmModal, setConfirmModal] = useState(null);
   const [comparisonMode, setComparisonMode] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [showFrameControls, setShowFrameControls] = useState(false);
   const [hoganScale, setHoganScale] = useState(1);
   const [hoganOffset, setHoganOffset] = useState({ x: 0, y: 0 });
   const [userBodyMeasurements, setUserBodyMeasurements] = useState(null);
@@ -46,6 +45,28 @@ export default function ComparePage() {
 
   // Check if all phases are marked
   const allPhasesMarked = swingPhases.every((phase) => phases[phase]);
+
+  // Add loadingSkeleton state to track when the skeleton (MotionTracker) is loading
+  const [loadingSkeleton, setLoadingSkeleton] = useState(false);
+  const [skeletonProgress, setSkeletonProgress] = useState(0);
+
+  // Animate skeleton progress bar when loadingSkeleton is true
+  useEffect(() => {
+    let interval;
+    if (loadingSkeleton) {
+      setSkeletonProgress(0);
+      interval = setInterval(() => {
+        setSkeletonProgress((prev) => {
+          if (prev >= 100) return 100;
+          // Fill quickly at first, then slow down
+          return prev + (prev < 80 ? 3 : 1.5);
+        });
+      }, 30);
+    } else {
+      setSkeletonProgress(0);
+    }
+    return () => interval && clearInterval(interval);
+  }, [loadingSkeleton]);
 
   // Calculate Hogan's playback rate based on swing durations
   const calculateHoganPlaybackRate = useCallback(() => {
@@ -121,6 +142,8 @@ export default function ComparePage() {
           
           if (phase === "Setup") {
             setShowSkeleton(true);
+            setLoadingSkeleton(true); // Show loading line when skeleton starts loading
+            console.log("setLoadingSkeleton(true) called");
           }
         },
         onCancel: () => setConfirmModal(null)
@@ -135,6 +158,8 @@ export default function ComparePage() {
 
     if (phase === "Setup") {
       setShowSkeleton(true);
+      setLoadingSkeleton(true); // Show loading line when skeleton starts loading (first time)
+      console.log("setLoadingSkeleton(true) called (first time)");
     }
   };
 
@@ -390,7 +415,6 @@ export default function ComparePage() {
     } else if (!isReplaying) {
       console.log('Toggling play/pause');
       setIsPlaying(!isPlaying);
-      setShowFrameControls(!isPlaying); // Show frame controls when pausing
     }
   };
 
@@ -405,24 +429,6 @@ export default function ComparePage() {
       // Apply both the calculated rate and the new speed setting
       hoganVideo.playbackRate = hoganPlaybackRate * speed;
       console.log(`Speed changed - Hogan playback rate: ${hoganPlaybackRate * speed} (base rate: ${hoganPlaybackRate}, speed: ${speed})`);
-    }
-  };
-
-  // Handle frame-by-frame navigation
-  const handleFrameStep = (direction) => {
-    const video = videoRef.current?.video;
-    
-    if (video) {
-      const frameTime = 1 / 30; // Assuming 30fps
-      const newTime = Math.max(0, Math.min(duration, currentTime + (direction * frameTime)));
-      
-      video.currentTime = newTime;
-      setCurrentTime(newTime);
-      
-      // Sync Hogan video for frame stepping using the scrub sync logic
-      if (comparisonMode) {
-        syncHoganVideo(newTime);
-      }
     }
   };
 
@@ -521,6 +527,7 @@ export default function ComparePage() {
         overflow: "hidden", // Prevent scrollbars
       }}
     >
+
       <div className="w-full max-w-[430px] mx-auto px-1 flex flex-col items-center" style={{ gap: '5px' }}>
         <div
           className="relative"
@@ -549,6 +556,19 @@ export default function ComparePage() {
               onLoadStart={handleVideoLoadStart}
               isReplaying={isReplaying}
             />
+
+            {/* Show loading line when skeleton is loading */}
+              {loadingSkeleton && (
+                <div className="ui-loading ui-absolute-center">
+                  Loading motion tracking...
+                  <div className="w-full h-2 bg-white bg-opacity-20 rounded mt-2">
+                    <div
+                      className="h-2 bg-white rounded transition-all duration-300"
+                      style={{ width: `${skeletonProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
 
             {/* Hogan comparison video overlay */}
             {comparisonMode && (
@@ -646,24 +666,6 @@ export default function ComparePage() {
                   )}
                 </div>
                 
-                {/* Frame-by-frame controls (shown when paused) */}
-                {showFrameControls && !isPlaying && (
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handleFrameStep(-1)}
-                      className="px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 rounded text-xs font-medium text-white"
-                    >
-                      ← Frame
-                    </button>
-                    <span className="text-xs text-white">Frame by Frame</span>
-                    <button
-                      onClick={() => handleFrameStep(1)}
-                      className="px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 rounded text-xs font-medium text-white"
-                    >
-                      Frame →
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -673,7 +675,7 @@ export default function ComparePage() {
             className="absolute flex flex-col items-center justify-center w-full gap-1"
             style={{ 
               maxWidth: "400px",
-              bottom: "10%", // Position from bottom, adjust as needed
+              bottom: "8%", // Position from bottom, adjust as needed
               left: 10,
               zIndex: 40,
               background: 'transparent', // Semi-transparent background
@@ -807,6 +809,7 @@ export default function ComparePage() {
               timestamp={!isPlaying && !isReplaying ? currentTime : undefined}
               drawOnce={!isPlaying && !isReplaying}
               onComplete={(landmarks) => {
+                setLoadingSkeleton(false); // Hide loading line when skeleton/model is ready
                 if (landmarks && !userBodyMeasurements) {
                   const measurements = calculateBodyMeasurements(landmarks);
                   if (measurements) {
@@ -886,7 +889,7 @@ export default function ComparePage() {
           <div 
             className="absolute flex items-center justify-center w-full"
             style={{ 
-              bottom: "20%", // Position from bottom, above the playback controls
+              bottom: "15%", // Position from bottom, above the playback controls
               zIndex: 45, // Higher than other UI elements
               background: 'transparent', // transparent background
               padding: '4px 4px',

@@ -258,9 +258,9 @@ const SwingPlayer = forwardRef(function SwingPlayer(
       >
         <div className="flex flex-col items-center space-y-3 w-3/4 max-w-xs px-4">
           {!hasError && (
-            <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-white bg-opacity-20 rounded-full overflow-hidden">
               <div
-                className="h-full bg-blue-400 transition-all duration-200"
+                className="h-2 bg-white rounded transition-all duration-300"
                 style={{ width: `${Math.round(loadProgress)}%` }}
               />
             </div>
