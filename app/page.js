@@ -116,7 +116,7 @@ export default function Home() {
             </li>
             <li className="flex items-start">
               <img src="/golf-ball-playhead.svg" alt="" className="w-5 h-5 mr-2 mt-1" />
-              Good lighting helps us see what’s really going on.
+              Good lighting helps us see what&#39;s really going on.
             </li>
           </ul>
         </div>
