@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.6] - 2025-06-03
+
+### Updated
+- Improved mobile-first instructional UI on the upload/landing page, including a new heading, subheading, and a custom golf ball SVG bullet list for swing recording tips.
+- Standardized instructional and button text sizes for better readability on mobile devices.
+- Switched instructional tips from <br /> line breaks to a semantic <ul> with custom SVG bullets for accessibility and clarity.
+- Clarified that the upload button on iOS/Android supports both video selection and direct capture, allowing for a simpler UI (removal of redundant capture button recommended).
+- Ensured all buttons use consistent Tailwind and custom classes for a unified look across pages.
+- Fixed CSS media query block in globals.css to resolve build errors.
+- General UI/UX polish and accessibility improvements for the main entry page.
+
 ## [0.0.5] - 2025-05-29
 
 ### Added
