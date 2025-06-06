@@ -20,6 +20,10 @@ export default function RootLayout({ children }) {
         <link rel="prefetch" href="/videos/test-clip.mp4" />
       </head>
       <body>
+        {/* Beta badge in upper left with drop shadow */}
+        <div style={{position: 'fixed', top: 0, left: 0, zIndex: 1000}}>
+          <img src="/beta.svg" alt="Beta badge" style={{height: 75, width: 'auto', filter: 'drop-shadow(0 0 4px rgba(0, 0, 0, 0.45))'}} />
+        </div>
         <Header />
         {/* ✅ This renders your actual page content */}
         {children}

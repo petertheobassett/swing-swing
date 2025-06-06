@@ -6,6 +6,7 @@ import MotionTracker from "@/components/MotionTracker";
 
 const FALLBACK_VIDEO_URL = "/videos/test-clip.mp4";
 const HOGAN_REFERENCE_VIDEO = "/videos/Ben-Hogan.mp4";
+const MIKELSON_REFERENCE_VIDEO = "/videos/Phil-Mikelson.mp4";
 const swingPhases = ["Setup", "Back", "Apex", "Impact", "Follow"];
 const PLAYBACK_SPEEDS = [1, 0.75, 0.5, 0.25, 0.1];
 
@@ -18,11 +19,29 @@ const HOGAN_PHASE_TIMESTAMPS = {
   Follow: 3.88   // 93 frames ÷ 24fps
 };
 
+// Mikelson swing phase timestamps (converted from frames at 24fps)
+const MIKELSON_PHASE_TIMESTAMPS = {
+  Setup: 0.42,   // 10 frames ÷ 24fps
+  Back: 0.54,    // 13 frames ÷ 24fps
+  Apex: 1.21,    // 29 frames ÷ 24fps
+  Impact: 1.50,  // 36 frames ÷ 24fps
+  Follow: 2.04   // 49 frames ÷ 24fps
+};
+
+// Select reference video and phase data based on handedness
+function getHandedness() {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('golferHandedness') || 'right';
+  }
+  return 'right';
+}
+
 export default function ComparePage() {
   const videoRef = useRef(null);
   const hoganVideoRef = useRef(null);
   const progressBarRef = useRef(null);
   const replayListenerRef = useRef(null);
+  const overlayRef = useRef(null);
   const [videoUrl, setVideoUrl] = useState(FALLBACK_VIDEO_URL);
   const [duration, setDuration] = useState(0);
   const [phases, setPhases] = useState({});
@@ -43,6 +62,7 @@ export default function ComparePage() {
   const [hoganBodyMeasurements, setHoganBodyMeasurements] = useState(null);
   const [hoganPlaybackRate, setHoganPlaybackRate] = useState(1);
   const [showInstruction, setShowInstruction] = useState(true);
+  const [showResetButton, setShowResetButton] = useState(false); // State to toggle between swing phase buttons and reset button
 
   // Check if all phases are marked
   const allPhasesMarked = swingPhases.every((phase) => phases[phase]);
@@ -75,8 +95,8 @@ export default function ComparePage() {
     
     const userBackTime = parseFloat(phases.Back);
     const userFollowTime = parseFloat(phases.Follow);
-    const hoganBackTime = parseFloat(HOGAN_PHASE_TIMESTAMPS.Back);
-    const hoganFollowTime = parseFloat(HOGAN_PHASE_TIMESTAMPS.Follow);
+    const hoganBackTime = parseFloat(referencePhases.Back);
+    const hoganFollowTime = parseFloat(referencePhases.Follow);
     
     if (isNaN(userBackTime) || isNaN(userFollowTime) || 
         isNaN(hoganBackTime) || isNaN(hoganFollowTime)) {
@@ -211,29 +231,25 @@ export default function ComparePage() {
 
   // Removed calculateTimeMapping - now using duration-based playback rate synchronization
 
+  // Ref for currentTime to avoid excessive re-renders
+  const currentTimeRef = useRef(currentTime);
+  useEffect(() => { currentTimeRef.current = currentTime; }, [currentTime]);
+
   // Simple sync function for scrubbing only - no sync during playback 
   const syncHoganVideo = useCallback((userCurrentTime) => {
-    if (!comparisonMode || !hoganVideoRef.current?.video || !allPhasesMarked) return;
-    
+    if (!comparisonMode || !hoganVideoRef.current?.video || !allPhasesMarked || isPlaying || isReplaying) return;
     const hoganVideo = hoganVideoRef.current.video;
-    
-    // For scrubbing, maintain the time relationship between back times
     const userBackTime = parseFloat(phases.Back);
-    const hoganBackTime = parseFloat(HOGAN_PHASE_TIMESTAMPS.Back);
-    
+    const hoganBackTime = parseFloat(referencePhases.Back);
     if (isNaN(userBackTime) || isNaN(hoganBackTime)) return;
-    
-    // Calculate relative time from back
     const userRelativeTime = userCurrentTime - userBackTime;
     const hoganTargetTime = hoganBackTime + userRelativeTime;
-    
-    // Only sync if there's a significant difference to avoid constant updates
     const timeDiff = Math.abs(hoganVideo.currentTime - hoganTargetTime);
     if (timeDiff > 0.1) {
       hoganVideo.currentTime = Math.max(0, hoganTargetTime);
-      console.log(`Scrubbing sync: User at ${userCurrentTime.toFixed(2)}s, Hogan seeked to ${hoganTargetTime.toFixed(2)}s`);
+      // console.log(`Scrubbing sync: User at ${userCurrentTime.toFixed(2)}s, Hogan seeked to ${hoganTargetTime.toFixed(2)}s`);
     }
-  }, [comparisonMode, allPhasesMarked, phases]);
+  }, [comparisonMode, allPhasesMarked, phases, isPlaying, isReplaying]);
 
   // Handle scrubbing
   const handleDrag = (e) => {
@@ -243,9 +259,8 @@ export default function ComparePage() {
     const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const seekTo = duration * percent;
     videoRef.current?.seekTo?.(seekTo);
-    
-    // Sync Hogan video when scrubbing
-    if (comparisonMode) {
+    // Sync Hogan video only when not playing
+    if (comparisonMode && !isPlaying && !isReplaying) {
       syncHoganVideo(seekTo);
     }
   };
@@ -273,6 +288,7 @@ export default function ComparePage() {
 
     console.log(`Starting replay: ${backTime}s -> ${followTime}s`);
     setIsReplaying(true);
+    setShowResetButton(true); // Show the reset button after replay is clicked
 
     try {
       // Clean up any existing replay listener
@@ -295,7 +311,7 @@ export default function ComparePage() {
       videoRef.current.seekTo(backTime);
       if (hoganVideo && comparisonMode) {
         // Seek Hogan to his back time (not user's back time)
-        const hoganBackTime = parseFloat(HOGAN_PHASE_TIMESTAMPS.Back);
+        const hoganBackTime = parseFloat(referencePhases.Back);
         hoganVideo.currentTime = hoganBackTime;
       }
       // Brief wait for seek operations to complete (increased to 300ms for better sync on slow devices)
@@ -304,7 +320,7 @@ export default function ComparePage() {
       // === Double-set currentTime for extra sync reliability ===
       video.currentTime = backTime;
       if (hoganVideo && comparisonMode) {
-        const hoganBackTime = parseFloat(HOGAN_PHASE_TIMESTAMPS.Back);
+        const hoganBackTime = parseFloat(referencePhases.Back);
         hoganVideo.currentTime = hoganBackTime;
       }
       // Log actual currentTime values for debugging (keep this one for now)
@@ -475,6 +491,28 @@ export default function ComparePage() {
     };
   }, [isDragging, duration]);
 
+  // Suppress browser pinch-to-zoom on mobile
+  useEffect(() => {
+    const preventPinchZoom = (e) => {
+      if (e.touches && e.touches.length === 2) {
+        e.preventDefault();
+      }
+    };
+    const preventGesture = (e) => {
+      e.preventDefault();
+    };
+    document.addEventListener('touchmove', preventPinchZoom, { passive: false });
+    document.addEventListener('gesturestart', preventGesture);
+    document.addEventListener('gesturechange', preventGesture);
+    document.addEventListener('gestureend', preventGesture);
+    return () => {
+      document.removeEventListener('touchmove', preventPinchZoom);
+      document.removeEventListener('gesturestart', preventGesture);
+      document.removeEventListener('gesturechange', preventGesture);
+      document.removeEventListener('gestureend', preventGesture);
+    };
+  }, []);
+
   const handleVideoError = useCallback(() => {
     setError("Failed to load video");
     setIsLoading(false);
@@ -524,6 +562,198 @@ export default function ComparePage() {
       window.removeEventListener('keydown', hideInstruction);
     };
   }, [showInstruction]);
+
+  // Set reference video and phase data based on handedness
+  const [referenceVideo, setReferenceVideo] = useState(HOGAN_REFERENCE_VIDEO);
+  const [referencePhases, setReferencePhases] = useState(HOGAN_PHASE_TIMESTAMPS);
+  const [referencePosition, setReferencePosition] = useState('right'); // 'right' or 'left'
+
+  useEffect(() => {
+    const handedness = getHandedness();
+    if (handedness === 'left') {
+      setReferenceVideo(MIKELSON_REFERENCE_VIDEO);
+      setReferencePhases(MIKELSON_PHASE_TIMESTAMPS);
+      setReferencePosition('left');
+    } else {
+      setReferenceVideo(HOGAN_REFERENCE_VIDEO);
+      setReferencePhases(HOGAN_PHASE_TIMESTAMPS);
+      setReferencePosition('right');
+    }
+  }, []);
+
+  // User-controlled overlay scale and position
+  const [overlayScale, setOverlayScale] = useState(0.475); // Default overlay scale
+  const [overlayOffset, setOverlayOffset] = useState({ x: 0, y: 0 });
+  const pinchState = useRef({ initialDistance: null, initialScale: null });
+
+  // Pinch-to-zoom handlers for overlay
+  const handleOverlayTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      pinchState.current.initialDistance = distance;
+      pinchState.current.initialScale = overlayScale;
+      console.log('Pinch start detected:', { distance, scale: overlayScale });
+    }
+  };
+
+  const handleOverlayTouchMove = (e) => {
+    if (e.touches.length === 2 && pinchState.current.initialDistance) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const scaleDelta = distance / pinchState.current.initialDistance;
+      let newScale = pinchState.current.initialScale * scaleDelta;
+      newScale = Math.max(0.2, Math.min(1.2, newScale)); // Clamp scale
+      setOverlayScale(newScale);
+      console.log('Pinch move detected:', { distance, newScale });
+    }
+  };
+
+  const handleOverlayTouchEnd = (e) => {
+    if (e.touches.length < 2) {
+      console.log('Pinch end detected');
+      pinchState.current.initialDistance = null;
+      pinchState.current.initialScale = null;
+    }
+  };
+
+  // Reset overlay scale and offset
+  const handleResetOverlay = () => {
+    setOverlayScale(0.475);
+    setOverlayOffset({ x: 0, y: 0 });
+  };
+
+  // Drag state for overlay repositioning
+  const [isOverlayDragging, setIsOverlayDragging] = useState(false);
+  const [dragStart, setDragStart] = useState(null); // {x, y}
+  const [overlayStart, setOverlayStart] = useState(null); // {x, y}
+  const [isOverlayResizing, setIsOverlayResizing] = useState(false);
+  const [resizeStart, setResizeStart] = useState(null); // {x, y}
+  const [scaleStart, setScaleStart] = useState(null); // number
+
+  // Overlay drag handlers (desktop and mobile)
+  // Only use handleOverlayPointerDown for mouse events
+  const handleOverlayPointerDown = (e) => {
+    // Only left mouse button
+    if (e.type === 'mousedown' && e.button !== 0) return;
+    e.stopPropagation();
+    setIsOverlayDragging(true);
+    setDragStart({
+      x: e.clientX,
+      y: e.clientY
+    });
+    setOverlayStart({ ...overlayOffset });
+    console.log('Drag start detected:', { x: e.clientX, y: e.clientY });
+  };
+  const handleOverlayPointerMove = (e) => {
+    if (!isOverlayDragging) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const dx = clientX - dragStart.x;
+    const dy = clientY - dragStart.y;
+    setOverlayOffset({
+      x: overlayStart.x + dx,
+      y: overlayStart.y + dy
+    });
+    if (e.touches) e.preventDefault();
+    console.log('Drag move detected:', { dx, dy });
+  };
+  const handleOverlayPointerUp = () => {
+    setIsOverlayDragging(false);
+    console.log('Drag end detected');
+  };
+  useEffect(() => {
+    if (!isOverlayDragging) return;
+    window.addEventListener('mousemove', handleOverlayPointerMove);
+    window.addEventListener('mouseup', handleOverlayPointerUp);
+    window.addEventListener('touchmove', handleOverlayPointerMove, { passive: false });
+    window.addEventListener('touchend', handleOverlayPointerUp);
+    return () => {
+      window.removeEventListener('mousemove', handleOverlayPointerMove);
+      window.removeEventListener('mouseup', handleOverlayPointerUp);
+      window.removeEventListener('touchmove', handleOverlayPointerMove);
+      window.removeEventListener('touchend', handleOverlayPointerUp);
+    };
+  }, [isOverlayDragging, dragStart, overlayStart]);
+
+  // Native touch event listeners for overlay drag (mobile)
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+    // Touch start
+    const handleTouchStart = (e) => {
+      if (e.touches.length > 1) return;
+      setIsOverlayDragging(true);
+      setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+      setOverlayStart({ ...overlayOffset });
+      e.preventDefault();
+    };
+    // Touch move
+    const handleTouchMove = (e) => {
+      if (!isOverlayDragging) return;
+      const clientX = e.touches[0].clientX;
+      const clientY = e.touches[0].clientY;
+      const dx = clientX - dragStart.x;
+      const dy = clientY - dragStart.y;
+      setOverlayOffset({ x: overlayStart.x + dx, y: overlayStart.y + dy });
+      e.preventDefault();
+    };
+    // Touch end
+    const handleTouchEnd = () => {
+      setIsOverlayDragging(false);
+    };
+    overlay.addEventListener('touchstart', handleTouchStart, { passive: false });
+    overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
+    overlay.addEventListener('touchend', handleTouchEnd);
+    return () => {
+      overlay.removeEventListener('touchstart', handleTouchStart);
+      overlay.removeEventListener('touchmove', handleTouchMove);
+      overlay.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isOverlayDragging, dragStart, overlayStart, overlayOffset]);
+
+  // Overlay resize handle (desktop only)
+  const handleResizePointerDown = (e) => {
+    e.stopPropagation();
+    setIsOverlayResizing(true);
+    setResizeStart({ x: e.clientX, y: e.clientY });
+    setScaleStart(overlayScale);
+  };
+  const handleResizePointerMove = (e) => {
+    if (!isOverlayResizing) return;
+    const dy = e.clientY - resizeStart.y;
+    let newScale = scaleStart + dy * 0.003; // Sensitivity
+    newScale = Math.max(0.2, Math.min(1.2, newScale));
+    setOverlayScale(newScale);
+  };
+  const handleResizePointerUp = () => {
+    setIsOverlayResizing(false);
+  };
+  useEffect(() => {
+    if (!isOverlayResizing) return;
+    window.addEventListener('mousemove', handleResizePointerMove);
+    window.addEventListener('mouseup', handleResizePointerUp);
+    return () => {
+      window.removeEventListener('mousemove', handleResizePointerMove);
+      window.removeEventListener('mouseup', handleResizePointerUp);
+    };
+  }, [isOverlayResizing, resizeStart, scaleStart]);
+
+  // Update overlay transform to use overlayOffset and overlayScale
+  const getOverlayTransform = () => {
+    // overlayOffset is in px, scale is unitless
+    const baseTranslate = referencePosition === 'left' ? -15 : 15;
+    return `translate(${baseTranslate}%, 0) translate(${overlayOffset.x}px, ${overlayOffset.y}px) scale(${overlayScale})`;
+  };
+
+  // Define handleResetSwingPhases to reset swing phases and toggle the reset button
+  const handleResetSwingPhases = () => {
+    setPhases({}); // Reset all phases
+    setShowResetButton(false); // Hide the reset button
+    console.log('Swing phases reset');
+  };
 
   return (
     <div
@@ -605,31 +835,31 @@ export default function ComparePage() {
             {/* Hogan comparison video overlay */}
             {comparisonMode && (
               <div 
-                className="absolute top-0 left-0 w-full h-full overflow-hidden"
+                className="absolute top-0 left-0 w-full h-full overflow-hidden group"
                 style={{ 
                   zIndex: 20,
-                  // Position Hogan slightly to the right and scale down to match user video
-                  transform: `translateX(15%) scale(0.475)`,
+                  transform: getOverlayTransform(),
                   transformOrigin: 'center center',
-                  // Advanced masking with blend modes for better overlay
-                  mixBlendMode: 'multiply',
-                  opacity: 0.85
+                  opacity: 0.8,
+                  cursor: isOverlayDragging ? 'grabbing' : 'grab',
+                  touchAction: 'none'
                 }}
+                ref={overlayRef}
+                onMouseDown={handleOverlayPointerDown}
               >
                 <div 
                   className="w-full h-full"
                   style={{
-                    // Enhanced filtering for better overlay visibility
                     filter: 'contrast(1.3) saturate(0.7) brightness(1.1)',
-                    // Create an elliptical mask around the golfer
-                    clipPath: 'ellipse(45% 47% at 50% 50%)',
-                    // Subtle background fade
-                    background: 'radial-gradient(ellipse 40% 60% at 50% 50%, transparent 70%, rgba(255,255,255,0.1) 90%)'
+                    borderRadius: '50px', // Adjust the value for the desired corner rounding
+                    backgroundColor: 'rgba(240, 240, 240, 0.8)', // Made the background slightly transparent
+                    border: 'none', // Removed the debugging border
+                    overflow: 'hidden', // Ensure child content respects the borderRadius
                   }}
                 >
                   <SwingPlayer
                     ref={hoganVideoRef}
-                    videoUrl={HOGAN_REFERENCE_VIDEO}
+                    videoUrl={referenceVideo}
                     isPlaying={isPlaying}
                     setIsPlaying={() => {}} // Don't let Hogan video control main state
                     currentTime={currentTime}
@@ -640,7 +870,36 @@ export default function ComparePage() {
                     onLoadStart={() => {}}
                     isReplaying={isReplaying}
                   />
+                  {/* Desktop resize handle */}
+                  <div
+                    className="hidden md:block absolute bottom-2 right-2 w-6 h-6 bg-white bg-opacity-80 rounded-full border border-gray-300 cursor-nwse-resize z-50 flex items-center justify-center"
+                    style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}
+                    onMouseDown={handleResizePointerDown}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 13l10-10M13 13H3V3" stroke="#888" strokeWidth="2" strokeLinecap="round"/></svg>
+                  </div>
                 </div>
+                {/* Reset overlay button (mobile-friendly) */}
+                <button
+                  className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white bg-opacity-80 text-xs px-3 py-1 rounded shadow z-50 border border-gray-300"
+                  style={{ fontWeight: 600, paddingTop: '55px' }}
+                  onClick={handleResetOverlay}
+                  tabIndex={0}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-4 h-4"
+                  >
+                    <path d="M2 12a10 10 0 1 0 4-7.9" />
+                    <polyline points="2 12 6 8 10 12" />
+                  </svg>
+                </button>
               </div>
             )}
           </div>
@@ -870,11 +1129,8 @@ export default function ComparePage() {
               className="absolute top-0 left-0 w-full h-full pointer-events-none" 
               style={{ 
                 zIndex: 40,
-                // Match the exact same transform as the Hogan video overlay for perfect alignment
-                transform: `translateX(15%) scale(0.5)`,
+                transform: getOverlayTransform(),
                 transformOrigin: 'center center',
-                // Remove overflow: 'hidden' and clipPath so skeleton legs are not clipped
-                // The skeleton should be visible beyond the video mask and above all other UI elements
               }}
             >
               <MotionTracker
@@ -882,8 +1138,9 @@ export default function ComparePage() {
                 timestamp={!isPlaying && !isReplaying ? currentTime : undefined}
                 drawOnce={!isPlaying && !isReplaying}
                 isTransformed={true}
-                transformScale={0.5}
-                transformTranslateX={15}
+                transformScale={overlayScale}
+                transformTranslateX={referencePosition === 'left' ? -15 : 15}
+                transformOffset={overlayOffset}
                 onComplete={(landmarks) => {
                   if (landmarks && !hoganBodyMeasurements) {
                     const measurements = calculateBodyMeasurements(landmarks);
@@ -932,34 +1189,49 @@ export default function ComparePage() {
           <div 
             className="absolute flex items-center justify-center w-full"
             style={{ 
-              bottom: "15%", // Position from bottom, above the playback controls
+              bottom: "18%", // Move the button up slightly by increasing the bottom value
               zIndex: 45, // Higher than other UI elements
               background: 'transparent', // transparent background
               padding: '4px 4px',
               borderRadius: '4px'
             }}
           >
-            <div className="ui-phase-grid">
-              {swingPhases.map((phase) => (
-                <button
-                  key={phase}
-                  onClick={() => handleMarkPhase(phase)}
-                  onKeyDown={(e) => handlePhaseKey(e, phase)}
-                  className="ui-btn-pill"
-                  aria-label={`Mark phase ${phase}${
-                    phases[phase] ? ` (currently at ${phases[phase]}s)` : ""
-                  }`}
-                  tabIndex={0}
-                >
-                  <span className="font-semibold text-xs leading-tight">
-                    {phase}
-                  </span>
-                  <span className="text-[10px] text-[#E4572E] block">
-                    {phases[phase] ? `${phases[phase]}s` : "—"}
-                  </span>
-                </button>
-              ))}
-            </div>
+            {showResetButton ? (
+              // Reset button visible when reset mode is active
+              <button
+                onClick={handleResetSwingPhases}
+                className="ui-btn-pill"
+                padding="8px 12px"
+                aria-label="Reset Swing Phases"
+                tabIndex={0}
+              >
+                <span className="font-semibold text-s leading-tight">
+                  Reset Swing Phases
+                </span>
+              </button>
+            ) : (
+              <div className="ui-phase-grid">
+                {swingPhases.map((phase) => (
+                  <button
+                    key={phase}
+                    onClick={() => handleMarkPhase(phase)}
+                    onKeyDown={(e) => handlePhaseKey(e, phase)}
+                    className="ui-btn-pill"
+                    aria-label={`Mark phase ${phase}${
+                      phases[phase] ? ` (currently at ${phases[phase]}s)` : ""
+                    }`}
+                    tabIndex={0}
+                  >
+                    <span className="font-semibold text-xs leading-tight">
+                      {phase}
+                    </span>
+                    <span className="text-[10px] text-[#E4572E] block">
+                      {phases[phase] ? `${phases[phase]}s` : "—"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

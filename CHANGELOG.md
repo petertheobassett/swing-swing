@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.0.9] - 2025-06-06
+
+### Added
+- **Beta Badge**: Added a fixed-position `/beta.svg` badge with drop shadow to the upper left corner of all pages for site-wide visibility.
+
+### Changed & Improved
+- **Reset Swing Phases Button**: Ensured visual consistency with other buttons and improved its position for better UI alignment.
+- **Reset Overlay Button**: Updated to use an SVG reset graphic instead of text, and centered the button visually within the overlay.
+- **Overlay Controls (Mobile)**: Improved pinch-to-zoom and drag-to-move logic for the Hogan/Mikelson overlay on mobile devices. Added debugging logs and fixed event handling for smoother interaction.
+- **MotionTracker Stability**: Fixed a TensorFlow.js error (`Tensor is disposed`) by ensuring pose estimation and tensor access are aborted if the component is unmounted or reset, preventing runtime errors when resetting swing phases.
+- **Loader UI**: Removed outdated instructional text from the video loader overlay for a cleaner experience.
+- **UI Polish**: Added drop shadow to the beta badge for better visibility and aesthetics.
+
+### Fixed
+- Syntax and runtime errors in overlay touch/drag handlers and other event logic.
+- Ensured all event listeners are properly cleaned up to prevent memory leaks and errors.
+
 ## [0.0.8] - 2025-06-03
 
 ### Changed

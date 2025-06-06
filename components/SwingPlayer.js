@@ -270,20 +270,6 @@ const SwingPlayer = forwardRef(function SwingPlayer(
           <div className="text-base font-medium text-center">
             {hasError ? '⚠️ Failed to load video.' : 'Loading your swing…'}
           </div>
-          
-          {showInstructions && !hasError && (
-            <div
-              className="text-xs text-white/80 text-center mt-1 cursor-pointer select-none"
-              onClick={() => setShowInstructions(false)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setShowInstructions(false)}
-            >
-              <span className="block">Mark Your 5 Key Swing Moments:</span>
-              <span className="block font-semibold">Setup, Backswing, Apex, Downswing, & Follow-through.</span>
-              <span className="block">Scrub to each on the timeline, then tap the matching button to lock it in.</span>
-            </div>
-          )}
         </div>
       </div>
 

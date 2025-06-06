@@ -257,46 +257,58 @@ export default function MotionTracker({
   // ✅ Step 2: Separate effect to run detection logic - only runs when TF is loaded
   useEffect(() => {
     if (!tfLoaded || !detectorRef.current) return; // Don't run until TensorFlow is loaded and detector is ready
-    
-    let isMounted = true;
-
+    let isActive = true;
     const startTracking = async () => {
       const detector = detectorRef.current;
       const video = videoRef.current?.video;
-
       if (!detector || !video) return;
-
       if (drawOnce && timestamp !== undefined) {
         video.currentTime = timestamp;
-
         await new Promise((resolve) =>
           video.addEventListener('seeked', () => {
             video.pause();
             resolve();
           }, { once: true })
         );
-
-        const poses = await detector.estimatePoses(video);
-        if (poses.length && isMounted) {
+        let poses = [];
+        try {
+          if (!isActive) return;
+          poses = await detector.estimatePoses(video);
+        } finally {
+          if (window.tf && window.tf.engine) {
+            window.tf.engine().disposeVariables();
+            window.tf.engine().startScope && window.tf.engine().endScope && window.tf.engine().endScope();
+          }
+        }
+        if (poses.length && isActive) {
           drawSkeleton(canvasRef.current, poses[0], video, isTransformed, transformScale, transformTranslateX);
           if (onComplete) onComplete(poses[0].keypoints);
-
           // --- Auto phase detection ---
           if (onPhasesDetected) {
-            const detectedPhases = detectSwingPhasesFromPoses({poses, setupTime: timestamp || 0});
-            onPhasesDetected(detectedPhases);
+            try {
+              const detectedPhases = detectSwingPhasesFromPoses({ poses, setupTime: timestamp || 0 });
+              onPhasesDetected(detectedPhases);
+            } catch (error) {
+              console.error('Error detecting swing phases:', error);
+            }
           }
         }
       } else {
         const update = async () => {
-          if (!isMounted || video.paused || video.ended) return;
-
-          const poses = await detector.estimatePoses(video);
-          if (poses.length && canvasRef.current) {
+          if (!isActive || video.paused || video.ended) return;
+          let poses = [];
+          try {
+            poses = await detector.estimatePoses(video);
+          } finally {
+            if (window.tf && window.tf.engine) {
+              window.tf.engine().disposeVariables();
+              window.tf.engine().startScope && window.tf.engine().endScope && window.tf.engine().endScope();
+            }
+          }
+          if (poses.length && canvasRef.current && isActive) {
             const prev = prevKeypointsRef.current;
             const curr = poses[0].keypoints;
             let smoothed = curr;
-
             if (prev && prev.length === curr.length) {
               smoothed = curr.map((kp, i) => {
                 if (!prev[i]) return kp;
@@ -312,25 +324,18 @@ export default function MotionTracker({
                 }
               });
             }
-
             prevKeypointsRef.current = smoothed;
             drawSkeleton(canvasRef.current, { ...poses[0], keypoints: smoothed }, video, isTransformed, transformScale, transformTranslateX);
-            
-            // Call onComplete with landmarks for scaling calculation
             if (onComplete) onComplete(smoothed);
           }
-
-          rafIdRef.current = video.requestVideoFrameCallback(update);
+          if (isActive) rafIdRef.current = video.requestVideoFrameCallback(update);
         };
-
-        rafIdRef.current = video.requestVideoFrameCallback(update);
+        if (isActive) rafIdRef.current = video.requestVideoFrameCallback(update);
       }
     };
-
     startTracking();
-
     return () => {
-      isMounted = false;
+      isActive = false;
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
     };
   }, [videoRef, drawOnce, timestamp, onComplete, tfLoaded, onPhasesDetected]);

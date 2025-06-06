@@ -7,6 +7,12 @@ export default function Home() {
   const [videoURL, setVideoURL] = useState(null);
   const [recording, setRecording] = useState(false);
   const [mediaStream, setMediaStream] = useState(null);
+  const [handedness, setHandedness] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('golferHandedness') || 'right';
+    }
+    return 'right';
+  });
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
   const fileInputRef = useRef(null);
@@ -78,6 +84,13 @@ export default function Home() {
     setRecording(false);
   }
 
+  function handleHandednessChange(value) {
+    setHandedness(value);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('golferHandedness', value);
+    }
+  }
+
   return (
     <div
       style={{
@@ -90,37 +103,71 @@ export default function Home() {
     >
       <div className="w-full max-w-[430px] mx-auto px-4 flex flex-col items-center">
         {/* Heading text */}
-        <div className="w-3/4 mb-4">
-          <h2 className="text-xl font-bold mb-2">Swing Swing</h2>
-          <p className="text-sm text-gray-500">
-            Compare your swing to the pros.
-          </p>
-        </div>
+        {!videoURL && (
+          <div className="w-3/4 mb-4">
+            <h2 className="text-xl font-bold mb-2">Swing Swing</h2>
+            <p className="text-sm text-gray-500">
+              Compare your swing to the pros.
+            </p>
+          </div>
+        )}
         {/* Instructional text */}
-        <div className="w-3/4 mb-4 pb-4">
-          <h3 className="text-l font-bold mb-2 pb-2">Let&#39;s see your swing:</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Either upload a video clip or record one by tapping below.</p>
-          <ul className="text-sm text-gray-500 list-none pl-0">
-            <li className="flex items-start mb-2">
-              <img src="/golf-ball-playhead.svg" alt="" className="w-5 h-5 mr-2 mt-1" />
-              Set your phone to vertical.
-            </li>
-            <li className="flex items-start mb-2">
-              <img src="/golf-ball-playhead.svg" alt="" className="w-5 h-5 mr-2 mt-1" />
-              Select a clip or record one down-the-line — from directly behind.
-            </li>
-            <li className="flex items-start mb-2">
-              <img src="/golf-ball-playhead.svg" alt="" className="w-5 h-5 mr-2 mt-1" />
-              Make sure your full body and the club stay in frame the whole time.
-            </li>
-            <li className="flex items-start">
-              <img src="/golf-ball-playhead.svg" alt="" className="w-5 h-5 mr-2 mt-1" />
-              Good lighting helps us see what&#39;s really going on.
-            </li>
-          </ul>
-        </div>
+        {!videoURL && (
+          <div className="w-3/4 mb-4 pb-4">
+            <h3 className="text-l font-bold mb-2 pb-2">Let&#39;s see your swing:</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Either upload a video clip or record one by tapping below.</p>
+            <ul className="text-sm text-gray-500 list-none pl-0">
+              <li className="flex items-start mb-2">
+                <img src="/golf-ball-playhead.svg" alt="" className="w-5 h-5 mr-2 mt-1" />
+                Set your phone to vertical.
+              </li>
+              <li className="flex items-start mb-2">
+                <img src="/golf-ball-playhead.svg" alt="" className="w-5 h-5 mr-2 mt-1" />
+                Select a clip or record one down-the-line — from directly behind.
+              </li>
+              <li className="flex items-start mb-2">
+                <img src="/golf-ball-playhead.svg" alt="" className="w-5 h-5 mr-2 mt-1" />
+                Make sure your full body and the club stay in frame the whole time.
+              </li>
+              <li className="flex items-start">
+                <img src="/golf-ball-playhead.svg" alt="" className="w-5 h-5 mr-2 mt-1" />
+                Good lighting helps us see what&#39;s really going on.
+              </li>
+            </ul>
+          </div>
+        )}
         <div className="flex flex-col gap-4 items-center w-full">
+          {/* Handedness radio group */}
+        <div className="w-3/4 mb-4 flex flex-col items-center">
+          <label className="text-sm font-medium mb-2" htmlFor="handedness-right">Are you right or left handed?</label>
+          <div className="flex gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                id="handedness-right"
+                name="handedness"
+                value="right"
+                checked={handedness === 'right'}
+                onChange={() => handleHandednessChange('right')}
+                className="accent-green-500"
+              />
+              <span className="text-sm">Right Handed</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                id="handedness-left"
+                name="handedness"
+                value="left"
+                checked={handedness === 'left'}
+                onChange={() => handleHandednessChange('left')}
+                className="accent-green-500"
+              />
+              <span className="text-sm">Left Handed</span>
+            </label>
+          </div>
+        </div>
           <button
             className="ui-btn-pill"
             onClick={handleUploadClick}
@@ -150,17 +197,13 @@ export default function Home() {
         )}
         {/* Preview uploaded or recorded video */}
         {videoURL && (
-          <div style={{ width: "100%", marginTop: 16 }}>
-            <video
-              src={videoURL}
-              controls
-              style={{ width: "100%", borderRadius: 16, background: "#000" }}
-            />
+          <div style={{ width: "65%", marginTop: 16 }}>
             <button
               className="ui-btn-pill-filled"
               onClick={navigateToAnalysis}
               style={{ 
-                marginTop: 16, 
+                marginTop: 16,
+                marginBottom: 16, 
                 width: "100%",
                 background: "#10b981",
                 borderColor: "#10b981"
@@ -169,6 +212,11 @@ export default function Home() {
             >
               Compare My Swing →
             </button>
+            <video
+              src={videoURL}
+              controls
+              style={{ width: "100%", borderRadius: 16, background: "#000" }}
+            />
           </div>
         )}
       </div>

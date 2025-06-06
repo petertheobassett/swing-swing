@@ -1,0 +1,11 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Lime green triangle in upper-left corner -->
+  <polygon points="0,0 100,0 0,100" fill="limegreen"></polygon>
+
+  <!-- Centered text diagonally across the triangle -->
+  <g transform="translate(35, 35) rotate(-45)">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">
+      BETA
+    </text>
+  </g>
+</svg>
