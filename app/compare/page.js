@@ -40,6 +40,8 @@
         const MemoizedMotionTracker = memo(MotionTracker);
         const MemoizedSwingPlayer = memo(SwingPlayer);
 
+        const DEBUG = false; // Set to true for development, false for production
+
         export default function ComparePage() {
           const videoRef = useRef(null);
           const hoganVideoRef = useRef(null);
@@ -117,7 +119,7 @@
             // Calculate rate so Hogan's swing matches user's swing duration
             const rate = hoganSwingDuration / userSwingDuration;
             
-            console.log('Swing duration calculation:', {
+            if (DEBUG) console.log('Swing duration calculation:', {
               userSwingDuration: userSwingDuration.toFixed(3),
               hoganSwingDuration: hoganSwingDuration.toFixed(3),
               calculatedRate: rate.toFixed(3)
@@ -130,7 +132,7 @@
           useEffect(() => {
             const uploadedVideo = localStorage.getItem('swingAnalysisVideo');
             if (uploadedVideo) {
-              console.log('Found uploaded video from main page:', uploadedVideo);
+              if (DEBUG) console.log('Found uploaded video from main page:', uploadedVideo);
               setVideoUrl(uploadedVideo);
               // Clear it from localStorage so it doesn't persist across sessions
               localStorage.removeItem('swingAnalysisVideo');
@@ -153,7 +155,7 @@
                   if (phase === "Setup") {
                     setShowSkeleton(true);
                     setLoadingSkeleton(true); // Show loading line when skeleton starts loading
-                    console.log("setLoadingSkeleton(true) called");
+                    if (DEBUG) console.log("setLoadingSkeleton(true) called");
                   }
                 },
                 onCancel: () => setConfirmModal(null)
@@ -169,7 +171,7 @@
             if (phase === "Setup") {
               setShowSkeleton(true);
               setLoadingSkeleton(true); // Show loading line when skeleton starts loading (first time)
-              console.log("setLoadingSkeleton(true) called (first time)");
+              if (DEBUG) console.log("setLoadingSkeleton(true) called (first time)");
             }
           };
 
@@ -208,7 +210,7 @@
             
             if (userHeight > 0 && hoganHeight > 0) {
               const scale = userHeight / hoganHeight;
-              console.log('Calculated scaling:', { userHeight, hoganHeight, scale });
+              if (DEBUG) console.log('Calculated scaling:', { userHeight, hoganHeight, scale });
               setHoganScale(scale);
               
               // Calculate vertical offset to align ankle positions
@@ -228,7 +230,7 @@
           // Trigger comparison mode when all phases are marked
           useEffect(() => {
             if (allPhasesMarked && !comparisonMode) {
-              console.log('All phases marked, entering comparison mode');
+              if (DEBUG) console.log('All phases marked, entering comparison mode');
               setComparisonMode(true);
             }
           }, [allPhasesMarked, comparisonMode]);
@@ -273,7 +275,7 @@
 
           // Handle replay functionality
           const handleReplay = async () => {
-            console.log('handleReplay called:', { allPhasesMarked, videoRef: !!videoRef.current, phases });
+            if (DEBUG) console.log('handleReplay called:', { allPhasesMarked, videoRef: !!videoRef.current, phases });
             if (!allPhasesMarked || !videoRef.current) return;
 
             const backTime = parseFloat(phases.Back);
@@ -283,14 +285,14 @@
             const newHoganPlaybackRate = calculateHoganPlaybackRate();
             setHoganPlaybackRate(newHoganPlaybackRate);
 
-            console.log('Phase times:', { backTime, followTime, backRaw: phases.Back, followRaw: phases.Follow });
+            if (DEBUG) console.log('Phase times:', { backTime, followTime, backRaw: phases.Back, followRaw: phases.Follow });
 
             if (isNaN(backTime) || isNaN(followTime) || backTime >= followTime) {
               console.error('Invalid phase times:', { backTime, followTime, backRaw: phases.Back, followRaw: phases.Follow });
               return;
             }
 
-            console.log(`Starting replay: ${backTime}s -> ${followTime}s`);
+            if (DEBUG) console.log(`Starting replay: ${backTime}s -> ${followTime}s`);
             setIsReplaying(true);
             setShowResetButton(true); // Show the reset button after replay is clicked
 
@@ -328,7 +330,7 @@
                 hoganVideo.currentTime = hoganBackTime;
               }
               // Log actual currentTime values for debugging (keep this one for now)
-              console.log('After double-set: user video at', video.currentTime, 'Hogan at', hoganVideo ? hoganVideo.currentTime : 'N/A');
+              if (DEBUG) console.log('After double-set: user video at', video.currentTime, 'Hogan at', hoganVideo ? hoganVideo.currentTime : 'N/A');
 
               if (!video) {
                 console.error('No video element available');
@@ -422,13 +424,13 @@
           // Handle main play/pause button
           const handlePlayPause = () => {
             setShowInstruction(false);
-            console.log('Play/pause clicked:', { allPhasesMarked, isPlaying, isReplaying });
+            if (DEBUG) console.log('Play/pause clicked:', { allPhasesMarked, isPlaying, isReplaying });
             
             if (allPhasesMarked && !isPlaying && !isReplaying) {
-              console.log('Triggering replay');
+              if (DEBUG) console.log('Triggering replay');
               handleReplay();
             } else if (!isReplaying) {
-              console.log('Toggling play/pause');
+              if (DEBUG) console.log('Toggling play/pause');
               setIsPlaying(!isPlaying);
             }
           };
@@ -443,7 +445,7 @@
             if (hoganVideo && comparisonMode) {
               // Apply both the calculated rate and the new speed setting
               hoganVideo.playbackRate = hoganPlaybackRate * speed;
-              console.log(`Speed changed - Hogan playback rate: ${hoganPlaybackRate * speed} (base rate: ${hoganPlaybackRate}, speed: ${speed})`);
+              if (DEBUG) console.log(`Speed changed - Hogan playback rate: ${hoganPlaybackRate * speed} (base rate: ${hoganPlaybackRate}, speed: ${speed})`);
             }
           };
 
@@ -525,16 +527,16 @@
           const handleVideoLoadStart = useCallback(() => {
             // Don't set loading state during replay operations
             if (isReplaying) {
-              console.log('Video load start triggered during replay - ignoring');
+              if (DEBUG) console.log('Video load start triggered during replay - ignoring');
               return;
             }
-            console.log('Video load start triggered');
+            if (DEBUG) console.log('Video load start triggered');
             setIsLoading(true);
             setError(null);
           }, [isReplaying]);
 
           const handleVideoLoaded = useCallback(() => {
-            console.log('Video loaded triggered');
+            if (DEBUG) console.log('Video loaded triggered');
             setIsLoading(false);
             setError(null);
           }, []);
@@ -598,7 +600,7 @@
               const distance = Math.sqrt(dx * dx + dy * dy);
               pinchState.current.initialDistance = distance;
               pinchState.current.initialScale = overlayScale;
-              console.log('Pinch start detected:', { distance, scale: overlayScale });
+              if (DEBUG) console.log('Pinch start detected:', { distance, scale: overlayScale });
             }
           };
 
@@ -611,13 +613,13 @@
               let newScale = pinchState.current.initialScale * scaleDelta;
               newScale = Math.max(0.2, Math.min(1.2, newScale)); // Clamp scale
               setOverlayScale(newScale);
-              console.log('Pinch move detected:', { distance, newScale });
+              if (DEBUG) console.log('Pinch move detected:', { distance, newScale });
             }
           };
 
           const handleOverlayTouchEnd = (e) => {
             if (e.touches && e.touches.length < 2) {
-              console.log('Pinch end detected');
+              if (DEBUG) console.log('Pinch end detected');
               pinchState.current.initialDistance = null;
               pinchState.current.initialScale = null;
             }
@@ -649,7 +651,7 @@
               y: e.clientY
             });
             setOverlayStart({ ...overlayOffset });
-            console.log('Drag start detected:', { x: e.clientX, y: e.clientY });
+            if (DEBUG) console.log('Drag start detected:', { x: e.clientX, y: e.clientY });
           };
           const handleOverlayPointerMove = (e) => {
             if (!isOverlayDragging) return;
@@ -662,11 +664,11 @@
               y: overlayStart.y + dy
             });
             if (e.touches) e.preventDefault();
-            console.log('Drag move detected:', { dx, dy });
+            if (DEBUG) console.log('Drag move detected:', { dx, dy });
           };
           const handleOverlayPointerUp = () => {
             setIsOverlayDragging(false);
-            console.log('Drag end detected');
+            if (DEBUG) console.log('Drag end detected');
           };
           useEffect(() => {
             if (!isOverlayDragging) return;
@@ -756,7 +758,7 @@
           const handleResetSwingPhases = () => {
             setPhases({}); // Reset all phases
             setShowResetButton(false); // Hide the reset button
-            console.log('Swing phases reset');
+            if (DEBUG) console.log('Swing phases reset');
           };
 
           // Throttle currentTime updates to reduce re-renders
