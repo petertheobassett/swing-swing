@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.0.10] - 2025-06-08
+
+### Added & Improved
+- **Reset Swing Phases Button**: Now appears in the same grid position as the "Setup" button when phase buttons are hidden, and is visually/structurally identical to phase buttons. Each word ("Reset", "Swing") is stacked for better fit.
+- **UI Consistency**: Removed legacy `.reset-swing-phases-btn` CSS to ensure the reset button matches the phase buttons in all states.
+- **Fun Animations**: Added smooth fade and scale transition animations to swing phase buttons and the reset button, with staggered appearance for a lively effect.
+- **Responsive Label**: The reset button label is now split across two lines ("Reset" and "Swing") for improved fit and clarity.
+
+### Fixed
+- Fixed CSS specificity and override issues that previously caused the reset button to appear with incorrect size or style.
+- Ensured invisible placeholder buttons maintain grid structure and sizing when only the reset button is shown.
+
+### Developer Experience
+- Cleaned up and modernized the phase button rendering logic in `app/compare/page.js` for maintainability and clarity.
+- Updated the changelog to reflect all UI/UX and code improvements for this release.
+
 ## [0.0.9] - 2025-06-06
 
 ### Added

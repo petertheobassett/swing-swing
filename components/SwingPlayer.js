@@ -250,7 +250,7 @@ const SwingPlayer = forwardRef(function SwingPlayer(
   const showLoader = !videoReady && !hasError && !hasEverBeenReady;
   
   return (
-    <div className="relative w-full h-full bg-black overflow-hidden">
+    <div className="relative w-full h-full bg-white overflow-hidden">
       {/* Simple loader overlay */}
       <div
         className={`absolute inset-0 z-10 flex items-center justify-center bg-black/80 text-white text-sm transition-opacity duration-500 ${
