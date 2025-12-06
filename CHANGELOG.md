@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.0.11] - 2025-12-06
+
+### Security
+- **Critical Security Update**: Updated Next.js from 15.3.2 to 16.0.7 to address CVE-2025-55182 and CVE-2025-66478 (React Server Components vulnerability).
+- **React Framework Update**: Updated React and React DOM from 19.0.0 to 19.2.1 for security patches.
+- **Dependency Audit**: Resolved all npm audit vulnerabilities - now at 0 vulnerabilities.
+
+### Notes
+- Next.js 16 requires Node.js ≥20.9.0 for optimal compatibility (currently running on Node.js 18.20.4).
+
 ## [0.0.10] - 2025-06-08
 
 ### Added & Improved
