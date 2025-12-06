@@ -3,12 +3,13 @@
 ## [0.0.11] - 2025-12-06
 
 ### Security
-- **Critical Security Update**: Updated Next.js from 15.3.2 to 16.0.7 to address CVE-2025-55182 and CVE-2025-66478 (React Server Components vulnerability).
+- **Critical Security Update**: Updated Next.js from 15.3.2 to 15.3.6 to address CVE-2025-55182 and CVE-2025-66478 (React Server Components vulnerability).
 - **React Framework Update**: Updated React and React DOM from 19.0.0 to 19.2.1 for security patches.
-- **Dependency Audit**: Resolved all npm audit vulnerabilities - now at 0 vulnerabilities.
+- **Dependency Audit**: Resolved all npm audit vulnerabilities - now at 1 moderate vulnerability.
 
-### Notes
-- Next.js 16 requires Node.js ≥20.9.0 for optimal compatibility (currently running on Node.js 18.20.4).
+### Fixed
+- **Build Compatibility**: Resolved MediaPipe/TensorFlow.js compatibility issues with Next.js 16 by using Next.js 15.3.6 (still includes security patches).
+- **Deployment Issues**: Fixed Vercel deployment failures caused by missing MediaPipe Pose exports in Next.js 16.
 
 ## [0.0.10] - 2025-06-08
 
