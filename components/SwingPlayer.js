@@ -87,7 +87,10 @@ const SwingPlayer = forwardRef(function SwingPlayer(
     setHasEverBeenReady(false); // Reset the "ever been ready" flag on URL change
 
     const handleReady = () => {
-      console.log('Video ready event fired, readyState:', video.readyState); // Debug log
+      // Only log when video is truly ready (readyState 4 = HAVE_ENOUGH_DATA)
+      if (video.readyState === 4) {
+        console.log('Video ready (HAVE_ENOUGH_DATA), readyState:', video.readyState);
+      }
       setVideoReady(true);
       setHasError(false);
       setLoadProgress(100); // Complete progress when ready
@@ -96,7 +99,7 @@ const SwingPlayer = forwardRef(function SwingPlayer(
     };
 
     const handleError = () => {
-      console.log('Video error event fired'); // Debug log
+      // console.log('Video error event fired'); // Debug log removed
       setHasError(true);
       setVideoReady(false);
     };
@@ -104,7 +107,10 @@ const SwingPlayer = forwardRef(function SwingPlayer(
     // Check if video is already ready (for cached videos)
     const checkIfReady = () => {
       if (video.readyState >= 3) { // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA
-        console.log('Video already ready on mount, readyState:', video.readyState);
+        // Only log if truly ready
+        if (video.readyState === 4) {
+          console.log('Video already ready on mount (HAVE_ENOUGH_DATA), readyState:', video.readyState);
+        }
         handleReady();
         return true;
       }
@@ -243,13 +249,8 @@ const SwingPlayer = forwardRef(function SwingPlayer(
 
   const showLoader = !videoReady && !hasError && !hasEverBeenReady;
   
-  // Debug logging for loader state
-  useEffect(() => {
-    console.log('Loader state:', { showLoader, videoReady, hasError, loadProgress, hasEverBeenReady });
-  }, [showLoader, videoReady, hasError, loadProgress, hasEverBeenReady]);
-
   return (
-    <div className="relative w-full h-full bg-black overflow-hidden">
+    <div className="relative w-full h-full bg-white overflow-hidden">
       {/* Simple loader overlay */}
       <div
         className={`absolute inset-0 z-10 flex items-center justify-center bg-black/80 text-white text-sm transition-opacity duration-500 ${
@@ -258,9 +259,9 @@ const SwingPlayer = forwardRef(function SwingPlayer(
       >
         <div className="flex flex-col items-center space-y-3 w-3/4 max-w-xs px-4">
           {!hasError && (
-            <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-white bg-opacity-20 rounded-full overflow-hidden">
               <div
-                className="h-full bg-blue-400 transition-all duration-200"
+                className="h-2 bg-white rounded transition-all duration-300"
                 style={{ width: `${Math.round(loadProgress)}%` }}
               />
             </div>
@@ -269,20 +270,6 @@ const SwingPlayer = forwardRef(function SwingPlayer(
           <div className="text-base font-medium text-center">
             {hasError ? '⚠️ Failed to load video.' : 'Loading your swing…'}
           </div>
-          
-          {showInstructions && !hasError && (
-            <div
-              className="text-xs text-white/80 text-center mt-1 cursor-pointer select-none"
-              onClick={() => setShowInstructions(false)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setShowInstructions(false)}
-            >
-              <span className="block">Mark Your 5 Key Swing Moments:</span>
-              <span className="block font-semibold">Setup, Backswing, Apex, Downswing, & Follow-through.</span>
-              <span className="block">Scrub to each on the timeline, then tap the matching button to lock it in.</span>
-            </div>
-          )}
         </div>
       </div>
 

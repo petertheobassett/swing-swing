@@ -1,5 +1,74 @@
 # Changelog
 
+## [0.0.11] - 2025-12-06
+
+### Security
+- **Critical Security Update**: Updated Next.js from 15.3.2 to 16.0.7 to address CVE-2025-55182 and CVE-2025-66478 (React Server Components vulnerability).
+- **React Framework Update**: Updated React and React DOM from 19.0.0 to 19.2.1 for security patches.
+- **Dependency Audit**: Resolved all npm audit vulnerabilities - now at 0 vulnerabilities.
+
+### Notes
+- Next.js 16 requires Node.js ≥20.9.0 for optimal compatibility (currently running on Node.js 18.20.4).
+
+## [0.0.10] - 2025-06-08
+
+### Added & Improved
+- **Reset Swing Phases Button**: Now appears in the same grid position as the "Setup" button when phase buttons are hidden, and is visually/structurally identical to phase buttons. Each word ("Reset", "Swing") is stacked for better fit.
+- **UI Consistency**: Removed legacy `.reset-swing-phases-btn` CSS to ensure the reset button matches the phase buttons in all states.
+- **Fun Animations**: Added smooth fade and scale transition animations to swing phase buttons and the reset button, with staggered appearance for a lively effect.
+- **Responsive Label**: The reset button label is now split across two lines ("Reset" and "Swing") for improved fit and clarity.
+
+### Fixed
+- Fixed CSS specificity and override issues that previously caused the reset button to appear with incorrect size or style.
+- Ensured invisible placeholder buttons maintain grid structure and sizing when only the reset button is shown.
+
+### Developer Experience
+- Cleaned up and modernized the phase button rendering logic in `app/compare/page.js` for maintainability and clarity.
+- Updated the changelog to reflect all UI/UX and code improvements for this release.
+
+## [0.0.9] - 2025-06-06
+
+### Added
+- **Beta Badge**: Added a fixed-position `/beta.svg` badge with drop shadow to the upper left corner of all pages for site-wide visibility.
+
+### Changed & Improved
+- **Reset Swing Phases Button**: Ensured visual consistency with other buttons and improved its position for better UI alignment.
+- **Reset Overlay Button**: Updated to use an SVG reset graphic instead of text, and centered the button visually within the overlay.
+- **Overlay Controls (Mobile)**: Improved pinch-to-zoom and drag-to-move logic for the Hogan/Mikelson overlay on mobile devices. Added debugging logs and fixed event handling for smoother interaction.
+- **MotionTracker Stability**: Fixed a TensorFlow.js error (`Tensor is disposed`) by ensuring pose estimation and tensor access are aborted if the component is unmounted or reset, preventing runtime errors when resetting swing phases.
+- **Loader UI**: Removed outdated instructional text from the video loader overlay for a cleaner experience.
+- **UI Polish**: Added drop shadow to the beta badge for better visibility and aesthetics.
+
+### Fixed
+- Syntax and runtime errors in overlay touch/drag handlers and other event logic.
+- Ensured all event listeners are properly cleaned up to prevent memory leaks and errors.
+
+## [0.0.8] - 2025-06-03
+
+### Changed
+- The play/replay button is now hidden until all swing phases are marked for the first time, ensuring users must define all phases before playback is available.
+- The progress bar and playhead remain visible at all times, allowing users to scrub and select their setup phase before marking all phases.
+- Improved the workflow and clarity for marking swing phases and starting analysis.
+
+## [0.0.7] - 2025-06-03
+
+### Fixed & Improved
+- **Suppressed Excessive Video Ready Logging**: Video ready event logs in SwingPlayer.js are now only shown when the video is truly ready (readyState 4), eliminating thousands of redundant logs and keeping the console clean.
+- **Loader & Playback Logic Cleanliness**: Removed or commented out all verbose loader and video ready logs. Loader and progress bar logic remains robust and user-friendly.
+- **Swing Phase Detection Tuning**: Maintained robust and accurate Follow phase detection and overall swing phase logic, with all changes reversible and codebase clean.
+- **No Breaking Changes**: All improvements are backward-compatible and maintain a clean, user-friendly experience.
+
+## [0.0.6] - 2025-06-03
+
+### Updated
+- Improved mobile-first instructional UI on the upload/landing page, including a new heading, subheading, and a custom golf ball SVG bullet list for swing recording tips.
+- Standardized instructional and button text sizes for better readability on mobile devices.
+- Switched instructional tips from <br /> line breaks to a semantic <ul> with custom SVG bullets for accessibility and clarity.
+- Clarified that the upload button on iOS/Android supports both video selection and direct capture, allowing for a simpler UI (removal of redundant capture button recommended).
+- Ensured all buttons use consistent Tailwind and custom classes for a unified look across pages.
+- Fixed CSS media query block in globals.css to resolve build errors.
+- General UI/UX polish and accessibility improvements for the main entry page.
+
 ## [0.0.5] - 2025-05-29
 
 ### Added
